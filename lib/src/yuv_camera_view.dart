@@ -1,0 +1,189 @@
+import 'dart:async';
+
+import 'package:camera/camera.dart';
+import 'package:flutter/material.dart';
+import 'package:yuv_ffi/yuv_ffi.dart';
+import 'package:yuv_camera/src/yuv_camera_frame.dart';
+import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
+import 'package:yuv_camera/src/yuv_camera_view_controller.dart';
+
+/// Shader-backed camera preview with independent, throttled frame processing.
+///
+/// Heavy synchronous work in [onFrame] still blocks the UI isolate and stops
+/// painting; use an isolate when the operation supports it.
+class YuvCameraView extends StatefulWidget {
+  const YuvCameraView({
+    super.key,
+    required this.cameraController,
+    this.viewController,
+    this.fit = YuvFrameFit.cover,
+    this.alignment = Alignment.center,
+    this.onFrame,
+    this.onFrameInterval = const Duration(milliseconds: 200),
+    this.overlayBuilder,
+    this.onStreamStopped,
+    this.onFramePresented,
+  });
+
+  final CameraController cameraController;
+  final YuvCameraViewController? viewController;
+  final YuvFrameFit fit;
+  final Alignment alignment;
+  final FutureOr<void> Function(YuvCameraFrame frame)? onFrame;
+  final Duration onFrameInterval;
+  final Widget Function(BuildContext context, YuvFrameGeometry geometry)? overlayBuilder;
+  final VoidCallback? onStreamStopped;
+
+  /// Reports each frame confirmed as drawn; [hasShader] is its renderer state.
+  final ValueChanged<bool>? onFramePresented;
+
+  @override
+  State<YuvCameraView> createState() => _YuvCameraViewState();
+}
+
+class _YuvCameraViewState extends State<YuvCameraView> {
+  late final YuvFramePresenter _presenter = YuvFramePresenter(useShader: true, onFramePresented: _onPresented);
+  YuvCameraFrameSource? _source;
+  YuvCameraFrame? _presentedCandidate;
+  YuvFrameGeometry? _geometry;
+  Completer<YuvImage?>? _capture;
+  Duration? _lastOnFrame;
+  bool _onFrameRunning = false;
+  Object? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    widget.viewController?.attach(_requestCapture);
+    _start();
+  }
+
+  @override
+  void didUpdateWidget(covariant YuvCameraView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.viewController != widget.viewController) {
+      oldWidget.viewController?.detach(_requestCapture);
+      widget.viewController?.attach(_requestCapture);
+    }
+    if (oldWidget.cameraController != widget.cameraController) {
+      _stop();
+      _error = null;
+      _start();
+    }
+  }
+
+  void _start() {
+    final source = YuvCameraFrameSource(widget.cameraController, onFrame: _onFrame, onError: _onError);
+    _source = source;
+    source.start();
+  }
+
+  void _onFrame(YuvCameraFrame frame) {
+    _dispatchFrameCallback(frame);
+    if (_presenter.isBusy) return;
+    try {
+      if (_presenter.present(frame.image, orientation: frame.orientation)) {
+        _presentedCandidate = frame;
+      }
+    } catch (error, stack) {
+      FlutterError.reportError(
+        FlutterErrorDetails(exception: error, stack: stack, library: 'yuv_camera', context: ErrorDescription('presenting a camera frame')),
+      );
+    }
+  }
+
+  void _dispatchFrameCallback(YuvCameraFrame frame) {
+    final callback = widget.onFrame;
+    if (callback == null || _onFrameRunning) return;
+    if (_lastOnFrame case final last? when frame.timestamp - last < widget.onFrameInterval) return;
+    _lastOnFrame = frame.timestamp;
+    _onFrameRunning = true;
+    Future<void>.sync(() => callback(frame))
+        .catchError((Object error, StackTrace stack) {
+          FlutterError.reportError(
+            FlutterErrorDetails(exception: error, stack: stack, library: 'yuv_camera', context: ErrorDescription('processing a camera frame')),
+          );
+        })
+        .whenComplete(() => _onFrameRunning = false);
+  }
+
+  void _onGeometry(YuvFrameGeometry geometry) {
+    _geometry = geometry;
+    widget.viewController?.setGeometry(geometry);
+    _completeCaptureForPresentedFrame();
+    if (mounted) setState(() {});
+  }
+
+  void _onPresented() {
+    _completeCaptureForPresentedFrame();
+    widget.onFramePresented?.call(_presenter.hasShader);
+  }
+
+  void _completeCaptureForPresentedFrame() {
+    final capture = _capture;
+    final frame = _presentedCandidate;
+    final geometry = _geometry;
+    if (capture != null && !capture.isCompleted && frame != null && geometry != null) {
+      try {
+        final fullSource = Rect.fromLTWH(0, 0, frame.width.toDouble(), frame.height.toDouble());
+        capture.complete(
+          geometry.visibleSourceRect == fullSource && frame.orientation == YuvFrameOrientation.upright
+              ? frame.image.copy()
+              : geometry.apply(frame.image),
+        );
+      } catch (error, stack) {
+        capture.completeError(error, stack);
+      }
+      _capture = null;
+    }
+  }
+
+  Future<YuvImage?> _requestCapture() {
+    final pending = _capture;
+    if (pending != null && !pending.isCompleted) return pending.future;
+    final next = _capture = Completer<YuvImage?>();
+    return next.future;
+  }
+
+  void _onError(Object error) {
+    _completeCapture(null);
+    if (mounted) setState(() => _error = error);
+    widget.onStreamStopped?.call();
+  }
+
+  void _completeCapture(YuvImage? image) {
+    final capture = _capture;
+    _capture = null;
+    if (capture != null && !capture.isCompleted) capture.complete(image);
+  }
+
+  void _stop() {
+    _source?.dispose();
+    _source = null;
+    _presenter.reset();
+    _presentedCandidate = null;
+    _completeCapture(null);
+    widget.onStreamStopped?.call();
+  }
+
+  @override
+  void dispose() {
+    widget.viewController?.detach(_requestCapture);
+    _stop();
+    _presenter.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final error = _error;
+    if (error != null) return Center(child: Text('Camera error: $error', textAlign: TextAlign.center));
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        YuvFrameView(presenter: _presenter, fit: widget.fit, alignment: widget.alignment, onGeometryChanged: _onGeometry),
+        if (_geometry case final geometry?) widget.overlayBuilder?.call(context, geometry) ?? const SizedBox.shrink(),
+      ],
+    );
+  }
+}
