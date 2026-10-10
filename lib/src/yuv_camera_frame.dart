@@ -20,11 +20,21 @@ class YuvCameraFrame {
     required YuvImage Function() load,
   }) : _load = load;
 
+  /// Width in pixels of the raw [image].
   final int width;
+
+  /// Height in pixels of the raw [image].
   final int height;
+
+  /// Pixel format of the raw [image].
   final YuvPixelFormat format;
+
+  /// How the raw [image] must be rotated and mirrored to appear upright.
   final YuvFrameOrientation orientation;
+
+  /// Time since the frame source started; it restarts with each source start.
   final Duration timestamp;
+
   final YuvImage Function() _load;
   YuvImage? _image;
   YuvImage? _upright;

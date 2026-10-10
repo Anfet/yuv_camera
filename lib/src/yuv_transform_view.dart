@@ -6,6 +6,7 @@ import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
 
 /// Camera preview whose accepted frames are synchronously transformed first.
 class YuvTransformView extends StatefulWidget {
+  /// Creates a preview for [cameraController], which must be initialized, drawing the result of [transform].
   const YuvTransformView({
     super.key,
     required this.cameraController,
@@ -16,11 +17,22 @@ class YuvTransformView extends StatefulWidget {
     this.onStreamStopped,
   });
 
+  /// Initialized controller whose frames are shown.
   final CameraController cameraController;
+
+  /// Synchronously produces the image to draw for an accepted frame; it runs on the UI isolate.
   final YuvImage Function(YuvCameraFrame frame) transform;
+
+  /// How the image is fitted into the available space.
   final YuvFrameFit fit;
+
+  /// Where the image is placed inside the available space.
   final Alignment alignment;
+
+  /// Builds an overlay in the geometry of the currently displayed image.
   final Widget Function(BuildContext context, YuvFrameGeometry geometry)? overlayBuilder;
+
+  /// Called when the frame stream stops, including after a stream error.
   final VoidCallback? onStreamStopped;
 
   @override

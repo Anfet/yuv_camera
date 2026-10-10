@@ -12,6 +12,7 @@ import 'package:yuv_camera/src/yuv_camera_view_controller.dart';
 /// Heavy synchronous work in [onFrame] still blocks the UI isolate and stops
 /// painting; use an isolate when the operation supports it.
 class YuvCameraView extends StatefulWidget {
+  /// Creates a preview for [cameraController], which must be initialized.
   const YuvCameraView({
     super.key,
     required this.cameraController,
@@ -25,13 +26,30 @@ class YuvCameraView extends StatefulWidget {
     this.onFramePresented,
   });
 
+  /// Initialized controller whose frames are shown.
   final CameraController cameraController;
+
+  /// Optional handle for capturing the drawn frame and reading its geometry.
   final YuvCameraViewController? viewController;
+
+  /// How the frame is fitted into the available space.
   final YuvFrameFit fit;
+
+  /// Where the frame is placed inside the available space.
   final Alignment alignment;
+
+  /// Called with a frame at most once per [onFrameInterval] and never concurrently with itself.
+  ///
+  /// An error it throws is reported through `FlutterError.reportError`.
   final FutureOr<void> Function(YuvCameraFrame frame)? onFrame;
+
+  /// Minimum frame time between two [onFrame] calls.
   final Duration onFrameInterval;
+
+  /// Builds an overlay in the geometry of the currently displayed frame.
   final Widget Function(BuildContext context, YuvFrameGeometry geometry)? overlayBuilder;
+
+  /// Called when the frame stream stops, including after a stream error.
   final VoidCallback? onStreamStopped;
 
   /// Reports each frame confirmed as drawn; [hasShader] is its renderer state.

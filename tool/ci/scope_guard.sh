@@ -10,6 +10,7 @@ path_keys() {
   case "$1" in
     *.md|doc/*|tasks/*) ;;
     tool/ci/_common.ps1|tool/ci/drive.ps1|tool/ci/drive.sh|tool/ci/scope_guard.sh) printf 'all\n' ;;
+    tool/check_pair.ps1) printf 'vm windows web example\n' ;;
     tool/ci/vm.*) printf 'vm\n' ;;
     tool/ci/windows.*) printf 'windows\n' ;;
     tool/ci/android.*) printf 'android\n' ;;
