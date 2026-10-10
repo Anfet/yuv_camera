@@ -1,0 +1,139 @@
+# Platforms and troubleshooting
+
+**Task:** set up permissions and the camera provider for each platform, know exactly what has been verified, and fix the
+failures you are most likely to meet.
+
+**Conditions:** your app depends on `yuv_camera`, `yuv_ffi` and `camera` (see
+[Getting started](https://github.com/Anfet/yuv_camera/wiki/Getting-started)).
+
+## Platform setup
+
+| Platform | Setup |
+| --- | --- |
+| Android | `minSdk` 26 or higher, because `yuv_ffi` requires API 26. The `camera` plugin requests the camera permission at run time. |
+| iOS | `NSCameraUsageDescription` with a short reason in `ios/Runner/Info.plist`. |
+| macOS | `NSCameraUsageDescription` in `Info.plist`, and the `com.apple.security.device.camera` entitlement in each entitlements file you ship (typically the debug and release ones). |
+| Windows | `camera_desktop` in your `pubspec.yaml`; nothing else. |
+| Linux | `camera_desktop` in your `pubspec.yaml`, and the GStreamer development libraries (`libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev`) installed before building. |
+| Web | Chrome over `localhost` or HTTPS, and the browser's camera permission. |
+
+The plugins' documentation is the primary source for permission details:
+[`camera`](https://pub.dev/packages/camera) and [`camera_desktop`](https://pub.dev/packages/camera_desktop).
+
+### Desktop: Windows, macOS, Linux
+
+`camera` talks to the platform through a provider package. For Android, iOS and Web the default provider comes with
+`camera`; on Windows, macOS and Linux your app adds `camera_desktop` next to `camera`, and it is picked up as a federated
+plugin. `yuv_camera` does not depend on `camera_desktop` and does not register it: the choice of provider is the
+application's.
+
+The `camera` package restricts `CameraController.startImageStream` to Android and iOS. `yuv_camera` therefore reads frames
+from the platform interface (`CameraPlatform.instance.onStreamedFrameAvailable`) directly, which is how desktop frames
+reach `onFrame`, `YuvCameraFrameSource` and the preview. You do not call `startImageStream` yourself.
+
+### Web
+
+- Browsers expose the camera only in a secure context: serve the app from `localhost` or over HTTPS, and let the user
+  grant the camera permission ([MDN: `getUserMedia`](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)).
+- Frames come from `MediaStreamTrackProcessor`. Where the browser does not provide it, the source reads frames from a canvas
+  instead. The front camera is requested as `user`, back and external cameras as `environment`.
+- Web frames arrive as BGRA and upright.
+
+## What is verified
+
+Backend availability, a successful build and a confirmed physical camera are different things. The checks run directly on
+the maintainer's machines with the scripts in `tool/ci/` (the repository has no hosted CI), and their results are recorded
+against exact commits. So far they have confirmed:
+
+| Check | Result |
+| --- | --- |
+| The example's tests | 34 passed: 26 camera, 5 device-check and 3 for the ML Kit input conversion. |
+| Native capture integration target | Passed on Windows (Release) and on the Android `Tablet` emulator (x86_64, API 35). |
+| Web camera source smoke | Passed in Chrome (JavaScript build) with a fake media stream. |
+| iOS observation | The behavior documented on `YuvCameraFrame`: one iPhone, iOS 18.7, front camera, portrait and landscape. |
+
+A build, a passing emulator or a fake-stream target does not prove that a physical camera works on that platform. Other
+platforms, other browsers (including Safari and Firefox), `--wasm` builds and other devices are not claimed. The full
+set of required checks runs again before each release.
+
+## Troubleshooting
+
+### `availableCameras()` returns an empty list
+
+- Symptom: your code shows "no camera" and there is no preview.
+- Check: does the device or computer have a camera that other applications can see? On desktop, is `camera_desktop` in
+  `pubspec.yaml`, and was the app rebuilt after adding it?
+- Action: handle the empty list in your UI, as Getting started does, and connect a camera or add the missing provider.
+
+### `initialize()` throws, or the camera never opens
+
+- Symptom: the exception is caught by your code and you see your own message, or the picture never appears.
+- Check: was the permission denied? Compare the setup table above for your platform: Android needs `minSdk` 26 and the
+  run-time prompt, iOS and macOS need `NSCameraUsageDescription` (macOS also the entitlement), the browser needs the
+  permission on a secure origin. Is another application using the camera?
+- Action: fix the setup, then create a new `CameraController` and call `initialize()` again. A controller that failed to
+  initialize should be disposed, not reused.
+
+### The preview is replaced by `Camera error: ...`
+
+- Symptom: text starting with `Camera error:` where the preview was, and `onStreamStopped` is called.
+- Check: read the message. `Bad state: CameraController should be initialized` means the controller passed to the view was
+  not initialized. Another message is a failure of the frame stream.
+- Action: pass an initialized controller. After a stream failure open the camera again with a new controller: the source
+  that failed has stopped and the view shows the error until it is rebuilt with a new controller.
+
+### The preview stutters or freezes while you process frames
+
+- Symptom: smooth preview until `onFrame` or `transform` does real work.
+- Check: heavy synchronous work in `onFrame` or `transform` runs on the UI isolate and stops painting.
+- Action: shorten the work, raise `onFrameInterval`, or move the work to another isolate; see
+  [Frame processing](https://github.com/Anfet/yuv_camera/wiki/Frame-processing#how-often-onframe-runs).
+
+### `capture()` returns `null`
+
+- Symptom: the capture button does nothing, or your code reports no image.
+- Check: is the view built and attached (you passed its `viewController`)? Was the view or the controller replaced, or the
+  stream stopped, before a frame was drawn?
+- Action: capture when the preview is visible, keep the page alive while waiting, and show a message for `null`.
+  Details: [Preview and capture](https://github.com/Anfet/yuv_camera/wiki/Preview-and-capture#capture-what-is-on-screen).
+
+### `onFrame` is called less often than expected
+
+- Symptom: your callback runs a few times per second at most.
+- Check: `onFrameInterval` defaults to 200 ms, and `onFrame` never overlaps itself: while an async call is pending, frames
+  are skipped.
+- Action: lower `onFrameInterval` (`Duration.zero` offers every frame) and make the callback return sooner; use
+  `YuvCameraFrameSource` for your own pacing.
+
+### Detector boxes or overlays are in the wrong place
+
+- Symptom: boxes are mirrored, rotated or shifted.
+- Check: which coordinates are they in, and which matrix maps them?
+- Action: map upright boxes with `geometry.uprightToView`; see
+  [Geometry and overlays](https://github.com/Anfet/yuv_camera/wiki/Geometry-and-overlays#limits-and-errors).
+
+### The build fails on Linux
+
+- Symptom: the build cannot find GStreamer headers or libraries.
+- Check: are the GStreamer development packages installed?
+- Action: install `libgstreamer1.0-dev` and `libgstreamer-plugins-base1.0-dev` (or your distribution's equivalent), then
+  build again.
+
+### ML Kit gives no results on desktop or Web
+
+- Symptom: the example's face detection does nothing on Windows, macOS, Linux or Web.
+- Check: the example runs ML Kit face detection only on Android and iOS and skips it elsewhere.
+- Action: wire a detector that supports your platform, or run detection only on Android and iOS as the example does.
+
+### `pub get` cannot find `yuv_ffi ^0.5.2` or `yuv_camera`
+
+- Symptom: dependency resolution fails before the packages are published.
+- Check: are `yuv_ffi` 0.5.2 and `yuv_camera` 0.0.1 published? They are release candidates until then.
+- Action: use ignored `pubspec_overrides.yaml` files that point to local checkouts, as described under "Local development"
+  in the [README](https://github.com/Anfet/yuv_camera#local-development-with-an-unpublished-yuv_ffi). Do not commit them.
+
+## Related pages
+
+- [Getting started](https://github.com/Anfet/yuv_camera/wiki/Getting-started): the first working preview.
+- [Frame processing](https://github.com/Anfet/yuv_camera/wiki/Frame-processing): throttling and heavy work.
+- [yuv_ffi: Platforms and troubleshooting](https://github.com/Anfet/yuv_ffi/wiki/Platforms-and-troubleshooting): initialization, native library and Web module errors.
