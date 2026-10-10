@@ -4,6 +4,9 @@ This example opens a live camera preview, captures a frame through `YuvCameraVie
 The capture result screen can pass the captured frame to Google ML Kit face detection. The Device check screen runs
 the release validation flow recorded with the `DEVICE-1` report.
 
+The minimal usage is the Quick start in the [package README](../README.md); this app is the larger scenario with
+capture, ML Kit, and device checks.
+
 ## Run
 
 From this directory, run `flutter pub get` and then `flutter run -d <device>` on a supported device. The example uses
