@@ -11,7 +11,7 @@ import 'package:yuv_camera_example/ext.dart';
 /// **V, U** chroma) -- the only semi-planar layout it recognizes -- rather
 /// than this package's UV-ordered `nv12` storage or three separate I420
 /// planes mislabelled as `yuv420` (iOS-only in that enum, despite the name;
-/// see its own doc comments). iOS gets a tight packed BGRA buffer.
+/// see its own doc comments). iOS gets a packed BGRA buffer right-padded to a width multiple of 4.
 ///
 /// Every case below builds its source planes with real row padding **and** a
 /// real per-sample pixel gap (`pixelStride > sampleBytes`, `layout:
@@ -125,8 +125,9 @@ void main() {
     }
   });
 
-  test('BGRA with a padded, pixel-gapped plane produces a tight buffer with bytesPerRow == width * 4', () {
+  test('BGRA with a padded, pixel-gapped plane is right-padded to a width multiple of 4 with transparent pixels', () {
     const width = 5;
+    const paddedWidth = 8;
     const height = 3;
     // Real pixel gap: 4 visible BGRA bytes followed by 2 gap bytes per pixel
     // slot, i.e. `pixelStride (6) > sampleBytes (4)`.
@@ -136,20 +137,34 @@ void main() {
     final inputImage = image.toInputImage();
 
     expect(inputImage.metadata!.format, InputImageFormat.bgra8888);
-    expect(inputImage.metadata!.size, const Size(5, 3));
+    expect(inputImage.metadata!.size, const Size(8, 3));
     expect(inputImage.metadata!.rotation, InputImageRotation.rotation0deg);
-    expect(inputImage.metadata!.bytesPerRow, width * 4);
+    expect(inputImage.metadata!.bytesPerRow, paddedWidth * 4);
+    expect(image.width, width, reason: 'the source image must not change');
 
     final bytes = inputImage.bytes!;
-    expect(bytes.length, width * height * 4);
+    expect(bytes.length, paddedWidth * height * 4);
     expect(bytes, isNot(contains(gapSentinel)), reason: 'no gap/padding byte from the source plane may leak into the output');
 
     for (var row = 0; row < height; row++) {
-      for (var col = 0; col < width; col++) {
+      for (var col = 0; col < paddedWidth; col++) {
         for (var b = 0; b < 4; b++) {
-          expect(bytes[row * width * 4 + col * 4 + b], deterministicByte(1 + b, row * width + col), reason: 'BGRA[$row,$col,$b]');
+          final expected = col < width ? deterministicByte(1 + b, row * width + col) : 0;
+          expect(bytes[row * paddedWidth * 4 + col * 4 + b], expected, reason: 'BGRA[$row,$col,$b]');
         }
       }
     }
+  });
+
+  test('BGRA whose width is a multiple of 4 keeps its tight buffer and size', () {
+    const width = 4;
+    const height = 2;
+    final bgraPlane = paddedPlane(rows: height, columns: width, pixelStride: 4, sampleBytes: 4, rowPadding: 8, seed: 1);
+
+    final inputImage = YuvImage.bgra(width, height, planes: [bgraPlane], layout: YuvPlaneLayout.preserve).toInputImage();
+
+    expect(inputImage.metadata!.size, const Size(4, 2));
+    expect(inputImage.metadata!.bytesPerRow, width * 4);
+    expect(inputImage.bytes!.length, width * height * 4);
   });
 }

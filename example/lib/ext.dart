@@ -1,4 +1,5 @@
 import 'dart:typed_data';
+import 'dart:ui';
 
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
@@ -15,12 +16,32 @@ extension YuvImageToCameraExt on YuvImage {
           metadata: InputImageMetadata(size: size, rotation: rotation, format: InputImageFormat.nv21, bytesPerRow: width),
         );
       case YuvPixelFormat.bgra8888:
-        final tight = copy().pack();
+        // ML Kit on iOS reads no face from BGRA whose row length is not a multiple of 16 bytes, even with a matching
+        // bytesPerRow, so narrower rows are right-padded with transparent pixels; the image origin does not move.
+        final paddedWidth = (width + 3) ~/ 4 * 4;
+        final bytes = _toBgraBytes(paddedWidth);
         return InputImage.fromBytes(
-          bytes: tight.yPlane.bytes,
-          metadata: InputImageMetadata(size: size, rotation: rotation, format: InputImageFormat.bgra8888, bytesPerRow: width * 4),
+          bytes: bytes,
+          metadata: InputImageMetadata(
+            size: Size(paddedWidth.toDouble(), height.toDouble()),
+            rotation: rotation,
+            format: InputImageFormat.bgra8888,
+            bytesPerRow: paddedWidth * 4,
+          ),
         );
     }
+  }
+
+  Uint8List _toBgraBytes(int paddedWidth) {
+    final tight = copy().pack().yPlane.bytes;
+    if (paddedWidth == width) return tight;
+    final rowBytes = width * 4;
+    final paddedRowBytes = paddedWidth * 4;
+    final result = Uint8List(paddedRowBytes * height);
+    for (var row = 0; row < height; row++) {
+      result.setRange(row * paddedRowBytes, row * paddedRowBytes + rowBytes, tight, row * rowBytes);
+    }
+    return result;
   }
 
   Uint8List _toNv21Bytes() {
