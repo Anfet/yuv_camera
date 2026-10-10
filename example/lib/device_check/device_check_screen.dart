@@ -1,0 +1,446 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:ui' as ui;
+
+import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
+import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:yuv_ffi/yuv_ffi.dart';
+import 'package:yuv_camera_example/camera/heavy_blur.dart';
+import 'package:yuv_camera/yuv_camera.dart';
+import 'package:yuv_camera_example/device_check/device_check_report.dart';
+import 'package:yuv_camera_example/ext.dart';
+import 'package:yuv_camera_example/widgets/face_rect_paint.dart';
+
+/// Guided on-device validation for the release checklist.
+class DeviceCheckScreen extends StatefulWidget {
+  const DeviceCheckScreen({super.key, this.cameraEnabled = true});
+
+  final bool cameraEnabled;
+
+  @override
+  State<DeviceCheckScreen> createState() => _DeviceCheckScreenState();
+}
+
+class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
+  static const String _gitSha = String.fromEnvironment('GIT_SHA', defaultValue: 'unknown');
+  static const List<_DeviceCheckStep> _steps = [
+    _DeviceCheckStep('portrait_idle', 'Hold the phone vertically.', measures: true),
+    _DeviceCheckStep('portrait_heavy', 'Keep it vertical. Heavy processing runs once a second.', measures: true, heavy: true),
+    _DeviceCheckStep('landscape', 'Turn the phone horizontally.', measures: true, question: 'Is the preview rotated correctly?'),
+    _DeviceCheckStep(
+      'face_portrait',
+      'Hold the phone vertically with a face in frame.',
+      measures: true,
+      face: true,
+      question: 'Is the frame on the face?',
+    ),
+    _DeviceCheckStep('face_landscape', 'Turn horizontally with a face in frame.', measures: true, face: true, question: 'Is the frame on the face?'),
+    _DeviceCheckStep('mirror', 'Raise your right hand.', question: 'Is the hand on the right side of the screen?'),
+    _DeviceCheckStep('capture', 'Hold the phone vertically and tap Capture.', question: 'Does the capture match the preview?', capture: true),
+  ];
+
+  final YuvCameraViewController _viewController = YuvCameraViewController();
+  final DeviceCheckMeasurement _measurement = DeviceCheckMeasurement();
+  final List<DeviceCheckStepResult> _results = [];
+  final List<Duration> _blurDurations = [];
+  final GlobalKey _previewKey = GlobalKey();
+  final TextEditingController _notesController = TextEditingController();
+  CameraController? _cameraController;
+  FaceDetector? _faceDetector;
+  CameraDescription? _camera;
+  Rect? _faceBox;
+  ui.Image? _capturePreview;
+  int _stepIndex = 0;
+  int _blurRuns = 0;
+  // Identifies the current measurement so a late result of an earlier step cannot enter a later one.
+  int _measurementId = 0;
+  int _faceFrames = 0;
+  int _faceFramesWithFace = 0;
+  bool _measuring = false;
+  bool _awaitingAnswer = false;
+  bool _cameraReady = false;
+  bool _readyLogged = false;
+  Duration? _lastBlur;
+  Object? _cameraError;
+  DeviceCheckStepResult? _pendingResult;
+
+  _DeviceCheckStep get _step => _steps[_stepIndex];
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.cameraEnabled) _initializeCamera();
+  }
+
+  @override
+  void dispose() {
+    _viewController.dispose();
+    _faceDetector?.close().ignore();
+    _cameraController?.dispose();
+    _capturePreview?.dispose();
+    _notesController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_results.length == _steps.length) return _buildResult(context);
+    final compact = MediaQuery.orientationOf(context) == Orientation.landscape;
+    return Scaffold(
+      body: SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.max,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (!kReleaseMode)
+              const ColoredBox(
+                color: Colors.amber,
+                child: Padding(padding: EdgeInsets.all(8), child: Text('Run this check in release mode.')),
+              ),
+            Expanded(child: _buildPreview()),
+            Padding(
+              padding: EdgeInsets.all(compact ? 8 : 16),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                spacing: compact ? 6 : 12,
+                children: [
+                  Text('Step ${_stepIndex + 1}/${_steps.length}: ${_step.id}', style: Theme.of(context).textTheme.titleSmall),
+                  Text(_step.instruction, maxLines: compact ? 1 : null, overflow: TextOverflow.ellipsis),
+                  if (_measuring) const LinearProgressIndicator(),
+                  if (_awaitingAnswer) _answerControls() else _actionControls(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPreview() {
+    if (!widget.cameraEnabled) return const ColoredBox(color: Colors.black);
+    if (_cameraError case final error?) return Center(child: Text('Camera error: $error'));
+    if (!_cameraReady) return const Center(child: CircularProgressIndicator());
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        RepaintBoundary(
+          key: _previewKey,
+          child: YuvCameraView(
+            cameraController: _cameraController!,
+            viewController: _viewController,
+            onFrame: _handleFrame,
+            onFramePresented: _onFramePresented,
+            overlayBuilder: (context, geometry) => _faceBox == null
+                ? const SizedBox.shrink()
+                : CustomPaint(
+                    painter: FaceRectPainter(rect: _faceBox!, geometry: geometry),
+                  ),
+          ),
+        ),
+        if (_capturePreview case final image?) Positioned(right: 12, bottom: 12, width: 160, child: RawImage(image: image)),
+      ],
+    );
+  }
+
+  Widget _actionControls() {
+    if (_step.capture) {
+      return Row(
+        mainAxisSize: MainAxisSize.max,
+        crossAxisAlignment: CrossAxisAlignment.center,
+        spacing: 12,
+        children: [
+          Expanded(
+            child: FilledButton(onPressed: _cameraReady || !widget.cameraEnabled ? _capture : null, child: const Text('Capture')),
+          ),
+          OutlinedButton(onPressed: _skip, child: const Text('Skip')),
+        ],
+      );
+    }
+    return Row(
+      mainAxisSize: MainAxisSize.max,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      spacing: 12,
+      children: [
+        Expanded(
+          child: FilledButton(onPressed: _measuring ? null : _start, child: const Text('Start')),
+        ),
+        OutlinedButton(onPressed: _measuring ? null : _skip, child: const Text('Skip')),
+      ],
+    );
+  }
+
+  Widget _answerControls() => Row(
+    mainAxisSize: MainAxisSize.max,
+    crossAxisAlignment: CrossAxisAlignment.center,
+    spacing: 12,
+    children: [
+      Expanded(
+        child: FilledButton(onPressed: () => _answer(true), child: const Text('Yes')),
+      ),
+      Expanded(
+        child: OutlinedButton(onPressed: () => _answer(false), child: const Text('No')),
+      ),
+    ],
+  );
+
+  Widget _buildResult(BuildContext context) {
+    final report = _report;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Device check result')),
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            mainAxisSize: MainAxisSize.max,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            spacing: 12,
+            children: [
+              Expanded(
+                child: SingleChildScrollView(
+                  child: SelectableText(report.json, style: const TextStyle(fontFamily: 'monospace')),
+                ),
+              ),
+              TextField(
+                controller: _notesController,
+                decoration: const InputDecoration(labelText: 'Notes'),
+                onChanged: (_) => setState(() {}),
+              ),
+              FilledButton(
+                onPressed: () => Clipboard.setData(ClipboardData(text: _report.json)),
+                child: const Text('Copy'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _initializeCamera() async {
+    try {
+      final cameras = await availableCameras();
+      if (cameras.isEmpty) throw StateError('No cameras available on device');
+      final camera = cameras.firstWhere((value) => value.lensDirection == CameraLensDirection.front, orElse: () => cameras.first);
+      final controller = CameraController(camera, ResolutionPreset.medium, enableAudio: false, fps: 30);
+      await controller.initialize();
+      if (!mounted) {
+        controller.dispose();
+        return;
+      }
+      setState(() {
+        _camera = camera;
+        _cameraController = controller;
+        _cameraReady = true;
+      });
+    } catch (error) {
+      if (mounted) setState(() => _cameraError = error);
+    }
+  }
+
+  void _start() {
+    if (!_step.measures) {
+      _awaitAnswerOrAdvance(_emptyResult());
+      return;
+    }
+    _blurRuns = 0;
+    _blurDurations.clear();
+    _faceFrames = 0;
+    _faceFramesWithFace = 0;
+    _measurement.start();
+    final measurementId = ++_measurementId;
+    setState(() => _measuring = true);
+    Future<void>.delayed(deviceCheckMeasurementDuration, () {
+      if (!mounted || !_measuring || measurementId != _measurementId) return;
+      final result = _measurement.finish(
+        id: _step.id,
+        blurRuns: _step.heavy ? _blurRuns : null,
+        blurDurations: _blurDurations,
+        faceRatio: _step.face && _faceFrames > 0 ? _faceFramesWithFace / _faceFrames : null,
+      );
+      _log('Device check step ${jsonEncode(result.toJson())}');
+      setState(() {
+        _measuring = false;
+        _faceBox = null;
+      });
+      _awaitAnswerOrAdvance(result);
+    });
+  }
+
+  Future<void> _capture() async {
+    final image = await _viewController.capture();
+    final boundary = _previewKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+    final preview = await boundary?.toImage();
+    if (!mounted) {
+      preview?.dispose();
+      return;
+    }
+    setState(() {
+      _capturePreview?.dispose();
+      _capturePreview = preview;
+    });
+    _awaitAnswerOrAdvance(_emptyResult(capture: image == null ? null : '${image.width}x${image.height}'));
+  }
+
+  void _skip() {
+    final result = DeviceCheckStepResult(id: _step.id, skipped: true, seconds: 0);
+    _log('Device check step ${jsonEncode(result.toJson())}');
+    _advance(result);
+  }
+
+  void _answer(bool value) {
+    final current = _pendingResult;
+    if (current == null) return;
+    _pendingResult = null;
+    _advance(
+      DeviceCheckStepResult(
+        id: current.id,
+        skipped: current.skipped,
+        seconds: current.seconds,
+        displayFps: current.displayFps,
+        shader: current.shader,
+        rotation: current.rotation,
+        mirrored: current.mirrored,
+        frame: current.frame,
+        blurRuns: current.blurRuns,
+        blurMsMedian: current.blurMsMedian,
+        faceRatio: current.faceRatio,
+        answer: value,
+        capture: current.capture,
+      ),
+    );
+  }
+
+  void _awaitAnswerOrAdvance(DeviceCheckStepResult result) {
+    if (_step.question == null) {
+      _advance(result);
+      return;
+    }
+    setState(() {
+      _pendingResult = result;
+      _awaitingAnswer = true;
+    });
+  }
+
+  void _advance(DeviceCheckStepResult result) {
+    setState(() {
+      _awaitingAnswer = false;
+      _results.add(result);
+      if (_results.length < _steps.length) _stepIndex++;
+    });
+    if (_results.length == _steps.length) _log('Device check result ${_report.json}');
+  }
+
+  DeviceCheckStepResult _emptyResult({String? capture}) => DeviceCheckStepResult(id: _step.id, skipped: false, seconds: 0, capture: capture);
+
+  void _onFramePresented(bool shader) {
+    final camera = _camera;
+    final geometry = _viewController.geometry.value;
+    if (camera == null || geometry == null) return;
+    _measurement.presented(
+      shader: shader,
+      rotation: _rotationDegrees(geometry.orientation.rotation),
+      mirrored: geometry.orientation.mirrored,
+      width: geometry.sourceSize.width.round(),
+      height: geometry.sourceSize.height.round(),
+    );
+    if (!_readyLogged) {
+      _readyLogged = true;
+      debugPrint(
+        'Device ready {"build_mode":"${kReleaseMode
+            ? 'release'
+            : kProfileMode
+            ? 'profile'
+            : 'debug'}","shader":$shader}',
+      );
+    }
+  }
+
+  Future<void> _handleFrame(YuvCameraFrame frame) async {
+    final measurementId = _measurementId;
+    if (_step.heavy && _measuring && (_lastBlur == null || frame.timestamp - _lastBlur! >= const Duration(seconds: 1))) {
+      _lastBlur = frame.timestamp;
+      final image = frame.upright();
+      final stopwatch = Stopwatch()..start();
+      await compute(blurBgra, (bytes: image.toBgraBytes(), width: image.width, height: image.height));
+      stopwatch.stop();
+      if (!mounted || !_measuring || measurementId != _measurementId) return;
+      _blurRuns++;
+      _blurDurations.add(stopwatch.elapsed);
+    }
+    if (_step.face && _measuring && _supportsFaceDetection) await _detectFace(frame, measurementId);
+  }
+
+  bool get _supportsFaceDetection => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+
+  Future<void> _detectFace(YuvCameraFrame frame, int measurementId) async {
+    final rotation = switch (frame.orientation.rotation) {
+      YuvImageRotation.rotation0 => InputImageRotation.rotation0deg,
+      YuvImageRotation.rotation90 => InputImageRotation.rotation90deg,
+      YuvImageRotation.rotation180 => InputImageRotation.rotation180deg,
+      YuvImageRotation.rotation270 => InputImageRotation.rotation270deg,
+    };
+    final detector = _faceDetector ??= FaceDetector(options: FaceDetectorOptions(performanceMode: FaceDetectorMode.fast, enableTracking: true));
+    try {
+      final faces = await detector.processImage(frame.image.toInputImage(rotation: rotation));
+      // A detection finishing after its measurement ended must neither bring the box back nor count in a later step.
+      if (!mounted || !_measuring || measurementId != _measurementId) return;
+      _faceFrames++;
+      if (faces.isNotEmpty) _faceFramesWithFace++;
+      faces.sort(
+        (first, second) => (second.boundingBox.width * second.boundingBox.height).compareTo(first.boundingBox.width * first.boundingBox.height),
+      );
+      setState(() => _faceBox = faces.firstOrNull?.boundingBox);
+    } on MissingPluginException {
+      // Desktop test runners have no ML Kit registration; this check runs only on Android or iOS.
+    }
+  }
+
+  DeviceCheckReport get _report {
+    final camera = _camera;
+    return DeviceCheckReport(
+      gitSha: _gitSha,
+      operatingSystem: defaultTargetPlatform.name,
+      cameraLens: camera?.lensDirection.name ?? 'front',
+      sensorOrientation: camera?.sensorOrientation ?? 0,
+      steps: _results,
+      notes: _notesController.text,
+    );
+  }
+
+  void _log(String message) {
+    if (widget.cameraEnabled) debugPrint(message);
+  }
+}
+
+final class _DeviceCheckStep {
+  const _DeviceCheckStep(
+    this.id,
+    this.instruction, {
+    this.measures = false,
+    this.heavy = false,
+    this.face = false,
+    this.question,
+    this.capture = false,
+  });
+
+  final String id;
+  final String instruction;
+  final bool measures;
+  final bool heavy;
+  final bool face;
+  final String? question;
+  final bool capture;
+}
+
+int _rotationDegrees(YuvImageRotation rotation) => switch (rotation) {
+  YuvImageRotation.rotation0 => 0,
+  YuvImageRotation.rotation90 => 90,
+  YuvImageRotation.rotation180 => 180,
+  YuvImageRotation.rotation270 => 270,
+};

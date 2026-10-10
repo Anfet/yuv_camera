@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:yuv_camera/yuv_camera.dart';
+import 'package:yuv_ffi/yuv_ffi.dart';
+import 'package:yuv_camera_example/camera_screen.dart';
+import 'package:yuv_camera_example/capture_result_screen.dart';
+import 'package:yuv_camera_example/device_check/device_check_screen.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await YuvFfi.initialize();
   runApp(const MainApp());
 }
 
@@ -15,16 +20,28 @@ class MainApp extends StatefulWidget {
 class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
-    return const MaterialApp(
-      home: Scaffold(body: Center(child: Text('YUV camera package example'))),
+    return MaterialApp(
+      home: Scaffold(
+        appBar: AppBar(title: const Text('YUV Camera')),
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              FilledButton(onPressed: _takePhoto, child: const Text('Take photo')),
+              FilledButton(
+                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const DeviceCheckScreen())),
+                child: const Text('Device check'),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
+  Future<void> _takePhoto() async {
+    final frame = await Navigator.of(context).push<YuvImage>(MaterialPageRoute(builder: (_) => const CameraScreen()));
+    if (!mounted || frame == null) return;
+    await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => CaptureResultScreen(image: frame)));
   }
-
-  final YuvCameraViewController _controller = YuvCameraViewController();
 }
