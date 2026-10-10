@@ -1,0 +1,34 @@
+# Keep package archives free of local tooling, generated output and internal
+# engineering notes. Pub uses this file instead of .gitignore for this package.
+*.class
+*.log
+*.pyc
+*.swp
+.DS_Store
+.atom/
+.buildlog/
+.history
+.svn/
+migrate_working_dir/
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+.dart_tool/
+**/.dart_tool/
+**/build/
+/.flutter-plugins-dependencies
+**/.flutter-plugins-dependencies
+/pubspec.lock
+**/pubspec.lock
+**/pubspec_overrides.yaml
+**/doc/api/
+/AGENTS.md
+/COMPLETION.md
+/todo.md
+/.memory/
+/tasks/
+/tool/
+/doc/
+/test/
