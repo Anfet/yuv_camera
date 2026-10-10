@@ -51,7 +51,10 @@ example (`example/lib/ext.dart`, `toInputImage`) packs a `YuvImage` into an `Inp
 
 ## What is verified
 
-The package checks run directly on the developer machines, not in CI, and are recorded against exact SHAs:
+The package checks run directly on the maintainer's machines with the scripts in `tool/ci/` (the repository has no
+hosted CI), and their results are recorded against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
+`windows.ps1`, `android.ps1`, `web.ps1` and `example.ps1` on Windows; `bash tool/ci/linux.sh` on Linux;
+`bash tool/ci/macos.sh` and `bash tool/ci/ios.sh` on macOS. So far they have confirmed:
 
 - 34 example tests (26 camera, 5 device-check, 3 `toInputImage`).
 - The native capture integration target on Windows (Release) and on the Android `Tablet` emulator

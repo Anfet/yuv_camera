@@ -13,6 +13,22 @@ Package rules layered on `D:\.projects\AGENTS.md`, `D:\.projects\yuv\AGENTS.md`,
 
 ## Checks and workflow
 
-- Probe, validation, CI, and test requirements come from each active card and this package's scripts. Do not call `flutter drive` directly; use the checked-in `drive.ps1` / `drive.sh` wrapper and require exit 0 plus `All tests passed`.
-- CI has no automatic push trigger. Use only the group's accepted explicit CI process when authorized; external candidate checks and publication are release-stage work.
+- Probe, validation, and test requirements come from each active card and this package's scripts. Do not call `flutter drive` directly; use the checked-in `drive.ps1` / `drive.sh` wrapper and require exit 0 plus `All tests passed`.
+- No CI (D-38): the package has no GitHub Actions workflows; do not add any. Every check runs directly on the own machines (`D:\.projects\MACHINES.md`). `tool/ci/` keeps its name as the scripts directory.
+- Keys for changed paths: `bash tool/ci/scope_guard.sh <base>` (`path_keys()` is the source of truth). Commands, run from the package root:
+
+  | Key | Command | Machine |
+  | --- | --- | --- |
+  | `vm` | `pwsh -File tool/ci/vm.ps1` | Windows |
+  | `windows` | `pwsh -File tool/ci/windows.ps1` | Windows |
+  | `android` | `pwsh -File tool/ci/android.ps1` | Windows, AVD `Tablet` (not together with the Linux VM) |
+  | `web` | `pwsh -File tool/ci/web.ps1` (Mac: `bash tool/ci/web.sh`) | Windows, Chrome and ChromeDriver |
+  | `example` | `pwsh -File tool/ci/example.ps1` | Windows |
+  | `linux` | `bash tool/ci/linux.sh` | Ubuntu VM |
+  | `macos` | `bash tool/ci/macos.sh` | Mac |
+  | `ios` | `bash tool/ci/ios.sh` | Mac, Xcode and simulator |
+
+  Until `yuv_ffi` is published, the exact pair is checked with `pwsh -File tool/check_pair.ps1 -CameraPath <camera> -CameraSha <full SHA> -YuvPath <yuv> -YuvSha <full SHA>` on clean checkouts.
+- Card acceptance runs the card's scope keys and Probe. Before every release of every version run the full required set on the clean candidate regardless of the last card's scope: every key above, analyze of the root and example, the full example `flutter test`, the pair check, and the device checks of the release gate in the group `todo.md`. A previous PASS does not replace the run.
+- Reports record `Validated at` (full SHA) of this package and the exact `yuv_ffi` dependency SHA (or the published version after `yuv_ffi` is released), the machine and SDK, the command, the exit code, and the script's PASS criterion. Evidence moves to another SHA only when the diff of the covered paths is empty.
 - Preserve unrelated dirty files, check `git status` before edits, and commit only owned paths. The group Git repository owns task cards and shared docs; this child repository owns package implementation and these package rules.
