@@ -21,7 +21,7 @@ Package rules layered on `D:\.projects\AGENTS.md`, `D:\.projects\yuv\AGENTS.md`,
   | --- | --- | --- |
   | `vm` | `pwsh -File tool/ci/vm.ps1` | Windows |
   | `windows` | `pwsh -File tool/ci/windows.ps1` | Windows |
-  | `android` | `pwsh -File tool/ci/android.ps1` | Windows, AVD `Tablet` (not together with the Linux VM) |
+  | `android` | `pwsh -File tool/ci/android.ps1` | Windows, physical Pixel 3 over USB (`ANDROID_SERIAL=8B1X11QLW`), screen on and unlocked; emulators are not used |
   | `web` | `pwsh -File tool/ci/web.ps1` (Mac: `bash tool/ci/web.sh`) | Windows, Chrome and ChromeDriver |
   | `example` | `pwsh -File tool/ci/example.ps1` | Windows |
   | `linux` | `bash tool/ci/linux.sh` | Ubuntu VM |

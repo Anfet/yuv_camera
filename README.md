@@ -216,8 +216,7 @@ against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
 `bash tool/ci/ios.sh` on macOS. So far they have confirmed:
 
 - 34 example tests (26 camera, 5 device-check, 3 `toInputImage`).
-- The native capture integration target on Windows (Release) and on the Android
-  `Tablet` emulator (x86_64, API 35).
+- The native capture integration target on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build with the fake camera platform).
 - The Web camera source smoke in Chrome (JavaScript) with a fake media stream.
 - The iOS observation in the `YuvCameraFrame` documentation: one iPhone,
   iOS 18.7, front camera, portrait and landscape.

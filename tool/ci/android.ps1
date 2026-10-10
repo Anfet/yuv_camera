@@ -1,7 +1,5 @@
 [CmdletBinding()]
-param(
-  [string] $Device = 'emulator-5554'
-)
+param()
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -14,29 +12,79 @@ if (-not (Test-Path -LiteralPath $adb -PathType Leaf)) {
 }
 Add-CameraPath (Split-Path -Parent $adb)
 
-$devices = @(& $adb devices)
-$adbExitCode = $LASTEXITCODE
-$deviceReady = @($devices | Where-Object { $_ -match "^$([regex]::Escape($Device))\s+device(?:\s|$)" }).Count -gt 0
-if ($adbExitCode -ne 0 -or -not $deviceReady) {
-  throw "Start the Tablet AVD and connect it as $Device before running the camera capture target."
+& $adb start-server
+if ($LASTEXITCODE -ne 0) {
+  throw 'adb start-server failed'
 }
 
-$avdOutput = @(& $adb -s $Device emu avd name)
-$avdExitCode = $LASTEXITCODE
-if ($avdExitCode -ne 0 -or [string]($avdOutput | Select-Object -First 1) -ne 'Tablet') {
-  throw "$Device must be the configured Tablet AVD."
+$deviceLines = @(& $adb devices | Select-Object -Skip 1 | Where-Object { $_.Trim() })
+$authorized = @($deviceLines | Where-Object { $_ -match '^(\S+)\tdevice$' } | ForEach-Object { ($_ -split "`t")[0] })
+if ($env:ANDROID_SERIAL) {
+  $serial = if ($authorized -contains $env:ANDROID_SERIAL) { $env:ANDROID_SERIAL } else { $null }
+} else {
+  $serial = if ($authorized.Count -eq 1) { $authorized[0] } else { $null }
 }
+if (-not $serial) {
+  throw "BLOCKED: connect exactly one authorized Android device (adb state 'device') or set ANDROID_SERIAL; adb devices: $($deviceLines -join ' | ')"
+}
+
+function Invoke-AdbShell([string] $Command) {
+  $text = (& $adb -s $serial shell $Command 2>&1 | ForEach-Object { $_.ToString() }) -join "`n"
+  if ($LASTEXITCODE -ne 0) {
+    throw "adb shell '$Command' failed on ${serial}: $text"
+  }
+  $text
+}
+
+if ((Invoke-AdbShell 'dumpsys power') -notmatch 'mWakefulness=Awake' -or
+    (Invoke-AdbShell 'dumpsys window') -notmatch '(?i)(mKeyguardShowing=false|isStatusBarKeyguard=false|mShowingLockscreen=false|isKeyguardShowing=false)') {
+  throw "BLOCKED: turn on and unlock the screen of $serial"
+}
+
+$abilist = (Invoke-AdbShell 'getprop ro.product.cpu.abilist').Trim()
+if ($abilist -notmatch 'arm64-v8a') {
+  throw "BLOCKED: $serial does not support arm64-v8a ($abilist)"
+}
+$model = (Invoke-AdbShell 'getprop ro.product.model').Trim()
+$androidRelease = (Invoke-AdbShell 'getprop ro.build.version.release').Trim()
+Write-Output "Android device: $serial; model=$model; android=$androidRelease; abis=$abilist"
+
+$packageName = 'dev.yuv.yuv_camera_example'
+$target = 'integration_test/camera_capture_native_test.dart'
+$apk = 'build/app/outputs/flutter-apk/app-debug.apk'
 
 $repositoryRoot = Get-CameraRepositoryRoot
 Push-Location (Join-Path $repositoryRoot 'example')
 try {
   Invoke-CameraCommand flutter 'pub', 'get'
+
+  $packageInfo = (& $adb -s $serial shell dumpsys package $packageName 2>&1 | ForEach-Object { $_.ToString() }) -join "`n"
+  if ($LASTEXITCODE -ne 0) {
+    throw "Unable to read installed package information (adb exit code $LASTEXITCODE)."
+  }
+  if ($packageInfo -match '(?im)^\s*Unable to find package:') {
+    $installed = [long]0
+  } else {
+    $versionMatches = [regex]::Matches($packageInfo, '(?m)^\s*versionCode=(\d+)(?:\s|$)')
+    if ($versionMatches.Count -ne 1) {
+      throw "Unable to determine one installed versionCode; found $($versionMatches.Count) versionCode entries."
+    }
+    $installed = [long]$versionMatches[0].Groups[1].Value
+  }
+  $buildNumber = $installed + 1
+  Invoke-CameraCommand flutter 'build', 'apk', '--debug', "--target=$target", '--target-platform', 'android-arm64', "--build-number=$buildNumber"
+
+  $installOutput = @(& $adb -s $serial install -r (Resolve-Path -LiteralPath $apk).Path 2>&1 | ForEach-Object { $_.ToString() })
+  if ($LASTEXITCODE -ne 0 -or -not ($installOutput | Where-Object { $_ -match 'Success' })) {
+    throw "BLOCKED: adb install -r failed on $serial for ${packageName}: $($installOutput | Select-Object -Last 1). The script never removes apps or clears data; Engineer decides."
+  }
 } finally {
   Pop-Location
 }
 
-& (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/camera_capture_native_test.dart' $Device '--no-pub'
-if ($LASTEXITCODE -ne 0) {
-  throw "Android camera capture target failed with exit code $LASTEXITCODE"
+try {
+  & (Join-Path $PSScriptRoot 'drive.ps1') $target $serial '--no-pub' '--keep-app-running' "--use-application-binary=$apk"
+} finally {
+  & $adb -s $serial shell am force-stop $packageName
 }
-Write-Output "PASS integration_test/camera_capture_native_test.dart on Tablet ($Device)."
+Write-Output "PASS $target on $model ($serial)."

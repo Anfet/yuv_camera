@@ -48,7 +48,7 @@ against exact commits. So far they have confirmed:
 | Check | Result |
 | --- | --- |
 | The example's tests | 34 passed: 26 camera, 5 device-check and 3 for the ML Kit input conversion. |
-| Native capture integration target | Passed on Windows (Release) and on the Android `Tablet` emulator (x86_64, API 35). |
+| Native capture integration target | Passed on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build). |
 | Web camera source smoke | Passed in Chrome (JavaScript build) with a fake media stream. |
 | iOS observation | The behavior documented on `YuvCameraFrame`: one iPhone, iOS 18.7, front camera, portrait and landscape. |
 

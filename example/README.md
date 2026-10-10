@@ -22,6 +22,6 @@ ML Kit face detection runs only on Android and iOS; other platforms skip it.
 ## Verified
 
 The checks are run from the repository root with the scripts in `tool/ci/` (see "Platforms and limits" in the package
-README); there is no hosted CI. The native camera capture integration target passed on Windows Release and Android Tablet (x86_64/API 35). The Web
+README); there is no hosted CI. The native camera capture integration target passed on Windows Release and on a physical Pixel 3 (Android 12, `arm64-v8a`). The Web
 camera source smoke passed in Chrome JavaScript. A passing target does not prove a physical camera works; physical camera and
 device-check claims remain limited to their separately recorded manual checks.
