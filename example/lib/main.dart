@@ -10,30 +10,37 @@ Future<void> main() async {
   runApp(const MainApp());
 }
 
-class MainApp extends StatefulWidget {
+class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
   @override
-  State<MainApp> createState() => _MainAppState();
+  Widget build(BuildContext context) {
+    return const MaterialApp(home: _HomeScreen());
+  }
 }
 
-class _MainAppState extends State<MainApp> {
+class _HomeScreen extends StatefulWidget {
+  const _HomeScreen();
+
+  @override
+  State<_HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<_HomeScreen> {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: const Text('YUV Camera')),
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              FilledButton(onPressed: _takePhoto, child: const Text('Take photo')),
-              FilledButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const DeviceCheckScreen())),
-                child: const Text('Device check'),
-              ),
-            ],
-          ),
+    return Scaffold(
+      appBar: AppBar(title: const Text('YUV Camera')),
+      body: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            FilledButton(onPressed: _takePhoto, child: const Text('Take photo')),
+            FilledButton(
+              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const DeviceCheckScreen())),
+              child: const Text('Device check'),
+            ),
+          ],
         ),
       ),
     );
