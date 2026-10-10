@@ -1,0 +1,22 @@
+name: yuv_camera_example
+description: Minimal example for the yuv_camera package.
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.12.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+  yuv_camera:
+    path: ..
+  yuv_ffi: ^0.5.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
