@@ -2,7 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 
-const Duration deviceCheckMeasurementDuration = Duration(seconds: 15);
+const Duration deviceCheckMeasurementDuration = Duration(seconds: 5);
 
 /// Collects one release-device validation result in the documented schema.
 final class DeviceCheckReport {

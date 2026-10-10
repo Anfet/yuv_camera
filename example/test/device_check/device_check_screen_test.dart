@@ -16,7 +16,13 @@ void main() {
     addTearDown(() => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
     await tester.pumpWidget(const MaterialApp(home: DeviceCheckScreen(cameraEnabled: false)));
 
-    for (int index = 0; index < 7; index++) {
+    expect(find.text('Start'), findsOneWidget);
+    for (int index = 0; index < 5; index++) {
+      await tester.tap(find.text('Skip'));
+      await tester.pump();
+    }
+    expect(find.text('Next'), findsOneWidget);
+    for (int index = 0; index < 2; index++) {
       await tester.tap(find.text('Skip'));
       await tester.pump();
     }
@@ -36,6 +42,7 @@ void main() {
     await tester.tap(find.text('Start'));
     await tester.pump(deviceCheckMeasurementDuration);
     await tester.pump();
+    expect(find.text('Is the preview upright, with your head at the top of the screen?'), findsOneWidget);
     await tester.tap(find.text('Yes'));
     await tester.pump();
 
@@ -57,6 +64,7 @@ void main() {
     await tester.tap(find.text('Capture'));
     await tester.pump();
 
+    expect(find.text('Does the captured frame in the corner match the preview: same rotation, same mirror side, same framing?'), findsOneWidget);
     expect(find.text('Yes'), findsOneWidget);
     expect(find.text('No'), findsOneWidget);
     expect(find.text('Device check result'), findsNothing);
@@ -78,6 +86,16 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: DeviceCheckScreen(cameraEnabled: false)));
 
     expect(find.byType(AppBar), findsNothing);
-    expect(find.text('Hold the phone vertically.'), findsOneWidget);
+    expect(find.text('Hold the phone upright with the front camera facing you. Tap Start and hold still.'), findsOneWidget);
+
+    for (int index = 0; index < 6; index++) {
+      await tester.tap(find.text('Skip'));
+      await tester.pump();
+    }
+    await tester.tap(find.text('Capture'));
+    await tester.pump();
+
+    expect(find.text('Does the captured frame in the corner match the preview: same rotation, same mirror side, same framing?'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 }

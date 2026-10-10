@@ -24,6 +24,7 @@ void main() {
       notes: 'stable',
     );
 
+    expect(deviceCheckMeasurementDuration, const Duration(seconds: 5));
     final json = jsonDecode(report.json) as Map<String, Object?>;
     expect(json['card'], 'DEVICE-1');
     expect(json['schema'], 1);

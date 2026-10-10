@@ -1,11 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
-import 'dart:ui' as ui;
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
@@ -28,32 +26,57 @@ class DeviceCheckScreen extends StatefulWidget {
 class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
   static const String _gitSha = String.fromEnvironment('GIT_SHA', defaultValue: 'unknown');
   static const List<_DeviceCheckStep> _steps = [
-    _DeviceCheckStep('portrait_idle', 'Hold the phone vertically.', measures: true),
-    _DeviceCheckStep('portrait_heavy', 'Keep it vertical. Heavy processing runs once a second.', measures: true, heavy: true),
-    _DeviceCheckStep('landscape', 'Turn the phone horizontally.', measures: true, question: 'Is the preview rotated correctly?'),
+    _DeviceCheckStep('portrait_idle', 'Hold the phone upright with the front camera facing you. Tap Start and hold still.', measures: true),
+    _DeviceCheckStep(
+      'portrait_heavy',
+      'Keep the phone upright. Tap Start and hold still while a heavy blur runs in the background.',
+      measures: true,
+      heavy: true,
+    ),
+    _DeviceCheckStep(
+      'landscape',
+      'Turn the phone sideways (either direction) and keep your face in the preview. Tap Start and hold still.',
+      measures: true,
+      question: 'Is the preview upright, with your head at the top of the screen?',
+    ),
     _DeviceCheckStep(
       'face_portrait',
-      'Hold the phone vertically with a face in frame.',
+      'Turn the phone upright and keep your face in the preview. Tap Start, hold still and watch for a box around your face.',
       measures: true,
       face: true,
-      question: 'Is the frame on the face?',
+      question: 'Did the box stay on your face?',
     ),
-    _DeviceCheckStep('face_landscape', 'Turn horizontally with a face in frame.', measures: true, face: true, question: 'Is the frame on the face?'),
-    _DeviceCheckStep('mirror', 'Raise your right hand.', question: 'Is the hand on the right side of the screen?'),
-    _DeviceCheckStep('capture', 'Hold the phone vertically and tap Capture.', question: 'Does the capture match the preview?', capture: true),
+    _DeviceCheckStep(
+      'face_landscape',
+      'Turn the phone sideways and keep your face in the preview. Tap Start, hold still and watch for a box around your face.',
+      measures: true,
+      face: true,
+      question: 'Did the box stay on your face?',
+    ),
+    _DeviceCheckStep(
+      'mirror',
+      'Keep the phone upright and raise your right hand next to your face. Then tap Next.',
+      question: 'Is your raised hand on the right side of the screen, as in a mirror?',
+    ),
+    _DeviceCheckStep(
+      'capture',
+      'Keep the phone upright with your face in the preview and tap Capture. The captured frame appears in the bottom-right corner.',
+      question: 'Does the captured frame in the corner match the preview: same rotation, same mirror side, same framing?',
+      capture: true,
+    ),
   ];
 
   final YuvCameraViewController _viewController = YuvCameraViewController();
   final DeviceCheckMeasurement _measurement = DeviceCheckMeasurement();
   final List<DeviceCheckStepResult> _results = [];
   final List<Duration> _blurDurations = [];
-  final GlobalKey _previewKey = GlobalKey();
   final TextEditingController _notesController = TextEditingController();
   CameraController? _cameraController;
   FaceDetector? _faceDetector;
   CameraDescription? _camera;
   Rect? _faceBox;
-  ui.Image? _capturePreview;
+  YuvFramePresenter? _capturePresenter;
+  YuvImage? _captureImage;
   int _stepIndex = 0;
   int _blurRuns = 0;
   // Identifies the current measurement so a late result of an earlier step cannot enter a later one.
@@ -81,7 +104,7 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
     _viewController.dispose();
     _faceDetector?.close().ignore();
     _cameraController?.dispose();
-    _capturePreview?.dispose();
+    _capturePresenter?.dispose();
     _notesController.dispose();
     super.dispose();
   }
@@ -110,7 +133,11 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
                 spacing: compact ? 6 : 12,
                 children: [
                   Text('Step ${_stepIndex + 1}/${_steps.length}: ${_step.id}', style: Theme.of(context).textTheme.titleSmall),
-                  Text(_step.instruction, maxLines: compact ? 1 : null, overflow: TextOverflow.ellipsis),
+                  if (_awaitingAnswer && _step.question != null)
+                    Text(_step.question!, style: Theme.of(context).textTheme.titleMedium)
+                  else
+                    Text(_step.instruction),
+                  if (_measuring) Text('Measuring for ${deviceCheckMeasurementDuration.inSeconds} seconds. Hold still.'),
                   if (_measuring) const LinearProgressIndicator(),
                   if (_awaitingAnswer) _answerControls() else _actionControls(),
                 ],
@@ -129,21 +156,27 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        RepaintBoundary(
-          key: _previewKey,
-          child: YuvCameraView(
-            cameraController: _cameraController!,
-            viewController: _viewController,
-            onFrame: _handleFrame,
-            onFramePresented: _onFramePresented,
-            overlayBuilder: (context, geometry) => _faceBox == null
-                ? const SizedBox.shrink()
-                : CustomPaint(
-                    painter: FaceRectPainter(rect: _faceBox!, geometry: geometry),
-                  ),
-          ),
+        YuvCameraView(
+          cameraController: _cameraController!,
+          viewController: _viewController,
+          onFrame: _handleFrame,
+          onFramePresented: _onFramePresented,
+          overlayBuilder: (context, geometry) => _faceBox == null
+              ? const SizedBox.shrink()
+              : CustomPaint(
+                  painter: FaceRectPainter(rect: _faceBox!, geometry: geometry),
+                ),
         ),
-        if (_capturePreview case final image?) Positioned(right: 12, bottom: 12, width: 160, child: RawImage(image: image)),
+        if (_capturePresenter case final presenter?)
+          Positioned(
+            right: 12,
+            bottom: 12,
+            width: 160,
+            child: AspectRatio(
+              aspectRatio: _captureImage!.width / _captureImage!.height,
+              child: YuvFrameView(presenter: presenter, fit: YuvFrameFit.contain),
+            ),
+          ),
       ],
     );
   }
@@ -168,7 +201,7 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
       spacing: 12,
       children: [
         Expanded(
-          child: FilledButton(onPressed: _measuring ? null : _start, child: const Text('Start')),
+          child: FilledButton(onPressed: _measuring ? null : _start, child: Text(_step.measures ? 'Start' : 'Next')),
         ),
         OutlinedButton(onPressed: _measuring ? null : _skip, child: const Text('Skip')),
       ],
@@ -274,16 +307,14 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
 
   Future<void> _capture() async {
     final image = await _viewController.capture();
-    final boundary = _previewKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
-    final preview = await boundary?.toImage();
-    if (!mounted) {
-      preview?.dispose();
-      return;
+    if (!mounted) return;
+    if (image != null) {
+      setState(() {
+        _capturePresenter?.dispose();
+        _capturePresenter = YuvFramePresenter(useShader: true)..present(image);
+        _captureImage = image;
+      });
     }
-    setState(() {
-      _capturePreview?.dispose();
-      _capturePreview = preview;
-    });
     _awaitAnswerOrAdvance(_emptyResult(capture: image == null ? null : '${image.width}x${image.height}'));
   }
 

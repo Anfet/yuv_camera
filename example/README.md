@@ -17,7 +17,7 @@ From this directory, run `flutter pub get` and then `flutter run -d <device>` on
 On desktop, the example uses the `camera_desktop` federated implementation; the application, not `yuv_camera`,
 declares it. Linux builds require GStreamer development libraries; macOS needs `NSCameraUsageDescription` and the
 camera entitlement (both set here). Web camera access requires Chrome over localhost or HTTPS and browser permission.
-ML Kit face detection runs only on Android and iOS; other platforms skip it.
+ML Kit face detection runs only on Android and iOS; other platforms skip it. For Android release builds, R8 removes the constructors ML Kit needs to start, so the example keeps them in android/app/proguard-rules.pro; an app using ML Kit needs the same rule.
 
 ## Verified
 
