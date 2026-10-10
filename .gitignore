@@ -9,6 +9,7 @@
 /build/
 /coverage/
 /pubspec.lock
+/example/pubspec.lock
 /pubspec_overrides.yaml
 /example/pubspec_overrides.yaml
 **/doc/api/
