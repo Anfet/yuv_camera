@@ -62,6 +62,12 @@ class FakeCameraPlatform extends CameraPlatform {
   final List<int> cancels = [];
   final List<int> overlappingStarts = [];
 
+  /// Platform calls in order: `create:<id>`, `listen:<id>`, `cancel:<id>`, `dispose:<id>`.
+  final List<String> events = [];
+
+  /// Cameras returned by `availableCameras`.
+  List<CameraDescription> cameras = [const CameraDescription(name: 'fake-camera', lensDirection: CameraLensDirection.front, sensorOrientation: 0)];
+
   /// When set, the native stop of a cancelled stream waits for it.
   Completer<void>? stopGate;
 
@@ -70,6 +76,12 @@ class FakeCameraPlatform extends CameraPlatform {
 
   /// When set, `availableCameras` waits for it.
   Completer<void>? lookupGate;
+
+  /// When set, `dispose` waits for it.
+  Completer<void>? disposeGate;
+
+  /// When set, the next `initializeCamera` call throws it.
+  CameraException? failNextInitialize;
 
   /// When set, the next `onStreamedFrameAvailable` call throws it, the way a
   /// plugin reports a camera that cannot stream.
@@ -87,18 +99,24 @@ class FakeCameraPlatform extends CameraPlatform {
   @override
   Future<List<CameraDescription>> availableCameras() async {
     await lookupGate?.future;
-    return const [CameraDescription(name: 'fake-camera', lensDirection: CameraLensDirection.front, sensorOrientation: 0)];
+    return cameras;
   }
 
   @override
   Future<int> createCameraWithSettings(CameraDescription cameraDescription, MediaSettings? mediaSettings) async {
     createdCameras++;
+    events.add('create:$_nextCameraId');
     return _nextCameraId++;
   }
 
   @override
   Future<void> initializeCamera(int cameraId, {ImageFormatGroup imageFormatGroup = ImageFormatGroup.unknown}) async {
     await initializeGate?.future;
+    final failure = failNextInitialize;
+    if (failure != null) {
+      failNextInitialize = null;
+      throw failure;
+    }
     _events.add(CameraInitializedEvent(cameraId, frameWidth.toDouble(), frameHeight.toDouble(), ExposureMode.auto, false, FocusMode.auto, false));
   }
 
@@ -125,6 +143,7 @@ class FakeCameraPlatform extends CameraPlatform {
     controller = StreamController<CameraImageData>(
       onListen: () {
         listens.add(cameraId);
+        events.add('listen:$cameraId');
         if (_activeStreams.containsKey(cameraId) || _stopping.contains(cameraId)) {
           overlappingStarts.add(cameraId);
         }
@@ -132,6 +151,7 @@ class FakeCameraPlatform extends CameraPlatform {
       },
       onCancel: () async {
         cancels.add(cameraId);
+        events.add('cancel:$cameraId');
         if (identical(_activeStreams[cameraId], controller)) {
           _activeStreams.remove(cameraId);
         }
@@ -146,6 +166,8 @@ class FakeCameraPlatform extends CameraPlatform {
   @override
   Future<void> dispose(int cameraId) async {
     disposedCameras.add(cameraId);
+    events.add('dispose:$cameraId');
+    await disposeGate?.future;
     await _activeStreams.remove(cameraId)?.close();
   }
 }
