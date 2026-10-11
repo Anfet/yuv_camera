@@ -7,10 +7,12 @@ the release validation flow recorded with the `DEVICE-1` report.
 The minimal usage is the Quick start in the [package README](../README.md); this app is the larger scenario with
 capture, ML Kit, and device checks.
 
+Step-by-step guides are in the [yuv_camera wiki](https://github.com/Anfet/yuv_camera/wiki).
+
 ## Run
 
 From this directory, run `flutter pub get` and then `flutter run -d <device>` on a supported device. The example uses
-`yuv_camera` from `..` and `yuv_ffi: ^0.5.2`. Until that `yuv_ffi` is published, resolve it through an ignored
+`yuv_camera` from `..` and `yuv_ffi: ^0.5.2`. To run it against a local `yuv_ffi` checkout instead, add an ignored
 `pubspec_overrides.yaml` in this directory (see the package README, "Local development"), or run
 `tool/check_pair.ps1` from the repository root, which does it for an exact pair of checkouts.
 

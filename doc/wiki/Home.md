@@ -8,11 +8,8 @@ guides give step-by-step recipes, explain the behavior behind them and list the 
 [API reference](https://pub.dev/documentation/yuv_camera/latest/) lists every parameter, and the
 [CHANGELOG](https://github.com/Anfet/yuv_camera/blob/main/CHANGELOG.md) records what changed in each version.
 
-**Documented version: 0.0.1.** This wiki describes the 0.0.1 source in the repository, the first version of the package.
-It is a release candidate that is not published on pub.dev yet, and it requires `yuv_ffi: ^0.5.2`, which is not
-published yet either (the latest published `yuv_ffi` is 0.5.1). Until both are released, resolve them from local
-checkouts as described in the README under "Local development". Every recipe here was built against the 0.0.1 and
-`yuv_ffi` 0.5.2 sources.
+**Documented version: 0.0.1.** This wiki describes `yuv_camera` 0.0.1, the first version of the package, which
+requires `yuv_ffi: ^0.5.2`. Every recipe here was built against these two versions.
 
 Image formats, operations and display of images without a camera are covered by the
 [yuv_ffi wiki](https://github.com/Anfet/yuv_ffi/wiki). Read it for what a `YuvImage` can do once you hold one.

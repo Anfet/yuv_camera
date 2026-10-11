@@ -18,9 +18,7 @@ dependencies:
   camera_desktop: ^2.0.0
 ```
 
-`yuv_camera` requires `yuv_ffi: ^0.5.2`, and you use `yuv_ffi` types such as `YuvImage` with it. Until both packages
-are published, resolve them from local checkouts with ignored overrides; see "Local development" in the
-[README](https://github.com/Anfet/yuv_camera#local-development-with-an-unpublished-yuv_ffi). `camera_desktop` is not a
+`yuv_camera` requires `yuv_ffi: ^0.5.2`, and you use `yuv_ffi` types such as `YuvImage` with it. `camera_desktop` is not a
 dependency of `yuv_camera`: your app adds it next to `camera` on desktop platforms.
 
 ## Step 2: set up the platform

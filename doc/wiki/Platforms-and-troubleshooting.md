@@ -47,7 +47,7 @@ against exact commits. So far they have confirmed:
 
 | Check | Result |
 | --- | --- |
-| The example's tests | 34 passed: 26 camera, 5 device-check and 3 for the ML Kit input conversion. |
+| The example's tests | 37 passed: 26 camera, 5 device-check, 4 for the ML Kit input conversion and 2 for the example navigation. |
 | Native capture integration target | Passed on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build). |
 | Web camera source smoke | Passed in Chrome (JavaScript build) with a fake media stream. |
 | iOS observation | The behavior documented on `YuvCameraFrame`: one iPhone, iOS 18.7, front camera, portrait and landscape. |
@@ -124,13 +124,6 @@ set of required checks runs again before each release.
 - Symptom: the example's face detection does nothing on Windows, macOS, Linux or Web.
 - Check: the example runs ML Kit face detection only on Android and iOS and skips it elsewhere.
 - Action: wire a detector that supports your platform, or run detection only on Android and iOS as the example does.
-
-### `pub get` cannot find `yuv_ffi ^0.5.2` or `yuv_camera`
-
-- Symptom: dependency resolution fails before the packages are published.
-- Check: are `yuv_ffi` 0.5.2 and `yuv_camera` 0.0.1 published? They are release candidates until then.
-- Action: use ignored `pubspec_overrides.yaml` files that point to local checkouts, as described under "Local development"
-  in the [README](https://github.com/Anfet/yuv_camera#local-development-with-an-unpublished-yuv_ffi). Do not commit them.
 
 ## Related pages
 

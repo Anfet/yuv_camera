@@ -30,8 +30,7 @@ dependencies:
 ```
 
 Requirements: Dart `^3.12.0`, Flutter `>=3.44.0`. `yuv_camera` requires
-`yuv_ffi: ^0.5.2`. Until that version is published, see Local development
-below.
+`yuv_ffi: ^0.5.2`.
 
 ### Platform setup
 
@@ -215,7 +214,7 @@ against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
 `bash tool/ci/linux.sh` on Linux; `bash tool/ci/macos.sh` and
 `bash tool/ci/ios.sh` on macOS. So far they have confirmed:
 
-- 34 example tests (26 camera, 5 device-check, 3 `toInputImage`).
+- 37 example tests (26 camera, 5 device-check, 4 `toInputImage`, 2 example navigation).
 - The native capture integration target on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build with the fake camera platform).
 - The Web camera source smoke in Chrome (JavaScript) with a fake media stream.
 - The iOS observation in the `YuvCameraFrame` documentation: one iPhone,
@@ -227,6 +226,8 @@ Safari and Firefox), `--wasm` builds, and devices are not claimed.
 
 ## Learn more
 
+- [Wiki](https://github.com/Anfet/yuv_camera/wiki): step-by-step guides for
+  preview, capture, frame processing, geometry, and platform troubleshooting.
 - [Example app](example/README.md): a camera screen with capture, an ML Kit
   face-detection screen, and a device-check screen.
 - [API reference](https://pub.dev/documentation/yuv_camera/latest/) for every
@@ -237,7 +238,7 @@ Safari and Firefox), `--wasm` builds, and devices are not claimed.
 
 ## Local development with an unpublished `yuv_ffi`
 
-Until the matching `yuv_ffi` is published, the pair resolves only through ignored local overrides. Create
+To develop this package against a local `yuv_ffi` checkout, resolve it through ignored local overrides. Create
 `pubspec_overrides.yaml` in the package root and in `example/` (both are in `.gitignore`):
 
 ```yaml
