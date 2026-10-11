@@ -2,6 +2,12 @@
 
 Одна строка на завершённую задачу пакета. Карточки и вердикты удалённых карточек доступны в истории group checkout `D:\.projects\yuv`.
 
+## 12.10.2026
+
+- **ORCH 1** — DONE (R9, Review 2): оркестратор камеры с арендами, отложенным закрытием, одним живым контроллером и YuvCameraOrchestratorView; 2a–2i, стресс 50 циклов и пять widget-сценариев приняты. R9-ORCH-1 закрыт: повтор обоих analyze на Validated at — exit 0, No issues found!; код после Review 1 не менялся. Accepted SHA `3c794eded6584885857c5e62cf0738d1e3c7b700`; dependency yuv_ffi `fd22e0cf89ad1357c0a1d47b724f6be989b7203f`. CI: не требуется (D-38); merge/push не требуются. Reviewer проверки не запускал. Карточка/Review: история group `tasks/0.5.2/ORCH-1.md`.
+- **SHAPE 1** — DONE (R9, Review 2): YuvCropTarget с pixels/fraction/square, целочисленным размещением, проверкой ошибок и эталонной таблицей. R9-SHAPE-1 закрыт: повтор scope_guard на Validated at — exit 0, vm web windows; код после Review 1 не менялся. Accepted SHA `c533dce5b55d75e87b094c2b9c97f5e594b38c61`; dependency yuv_ffi `fd22e0cf89ad1357c0a1d47b724f6be989b7203f`. CI: не требуется (D-38); merge/push не требуются. Reviewer проверки не запускал. Карточка/Review: история group `tasks/0.5.2/SHAPE-1.md`.
+- **SHAPE 2** — DONE (R9, Review 2): croppedToShape, rectangle/ellipse, заливка внешних точек с сохранением внутренней цветности I420/NV12 и прозрачные BGRA-байты по маске; тесты трёх форматов и VM/Windows/Chrome evidence приняты. R9-SHAPE-2 закрыт: повтор scope_guard на Validated at — exit 0, vm web windows; код после Review 1 не менялся. Accepted SHA `32454cc28163a1c8a832c0606218d16cb814c625`; dependency yuv_ffi `fd22e0cf89ad1357c0a1d47b724f6be989b7203f`. Рекомендации Engineer (не блокируют приёмку): до GATE 2 подготовить native DLL в tool/ci/vm.ps1; в yuv_shape_crop_test.dart сравнивать цветность залитых блоков с независимым 2×2 swatch вместо fillChroma из результата. CI: не требуется (D-38); merge/push не требуются. Reviewer проверки не запускал. Карточка/Review: история group `tasks/0.5.2/SHAPE-2.md`.
+
 ## 10.10.2026
 
 - **CAM 1** — DONE: каркас Flutter-пакета `yuv_camera 0.0.1` (pubspec с зависимостями раздела 1 карты, metadata pub.dev, MIT, пустой entrypoint, analysis_options, `.gitignore` с локальными overrides и lock примера) и минимальный пример `yuv_camera_example` для Windows/Android/iOS/macOS/Web. Base `e0be2afcc76fafabfa119e42df1b3ffd8e4970d0`; accepted SHA `32afdfe22e1d0492ded60165b22524b66806c269`. CI: не требуется; merge/push не требуются. Карточка/Review: история group `tasks/0.0.1/CAM-1.md`.
