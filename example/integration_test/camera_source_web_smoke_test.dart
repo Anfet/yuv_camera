@@ -4,12 +4,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:yuv_camera/src/yuv_camera_frame.dart';
 import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
+import 'package:yuv_ffi/yuv_ffi.dart';
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('fake Web camera delivers a non-empty frame and stops cleanly', (tester) async {
     expect(kIsWeb, isTrue);
+    await YuvFfi.initialize();
     final cameras = await availableCameras();
     expect(cameras, isNotEmpty, reason: 'Chrome fake-media flags must expose a camera');
     final camera = cameras.firstWhere((camera) => camera.lensDirection == CameraLensDirection.front, orElse: () => cameras.first);

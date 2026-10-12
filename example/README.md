@@ -28,9 +28,9 @@ ML Kit face detection runs only on Android and iOS; other platforms skip it. For
 ## Verified
 
 The checks are run from the repository root with the scripts in `tool/ci/` (see "Platforms and limits" in the package
-README); there is no hosted CI. The recorded runs of `tool/ci/vm.ps1` passed 90 example tests. The `tool/ci/windows.ps1` script (release build) passed the
+README); there is no hosted CI. The recorded runs of `tool/ci/vm.ps1` passed 108 example tests. The `tool/ci/windows.ps1` script (release build) passed the
 native capture, shape-crop and orchestrator-cycles targets on Windows. The `tool/ci/web.ps1` script passed the Web camera
-source smoke, shape-crop and orchestrator-cycles targets in Chrome JavaScript with a fake device. The
+  source smoke, device-choice, shape-crop and orchestrator-cycles targets in Chrome JavaScript; device-choice uses two distinct fake video inputs. The
 `tool/ci/android.ps1` script passed the native capture, orchestrator-cycles and shape-crop targets on a physical Pixel 3
 (Android 12, `arm64-v8a`). A passing target does not prove a physical camera works; physical camera and device-check claims
 remain limited to their separately recorded manual checks.

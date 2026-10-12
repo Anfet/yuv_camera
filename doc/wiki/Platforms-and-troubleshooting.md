@@ -36,10 +36,15 @@ which reports every Windows camera as front. On macOS and Linux the package appl
 
 ### Web
 
+- `yuv_camera` opens a second media stream on the controller's device, matched by its unique, non-empty camera label.
+  Empty, missing or duplicate labels fall back to the camera direction (`front` requests `user`, `back` and `external`
+  request `environment`). The controller's `ResolutionPreset` and optional `fps` are requested as `ideal` constraints,
+  so the browser may adjust them. Device enumeration or stream-opening failures stop the source and reach `onError`.
+
 - Browsers expose the camera only in a secure context: serve the app from `localhost` or over HTTPS, and let the user
   grant the camera permission ([MDN: `getUserMedia`](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)).
 - Frames come from `MediaStreamTrackProcessor`. Where the browser does not provide it, the source reads frames from a canvas
-  instead. The front camera is requested as `user`, back and external cameras as `environment`.
+  instead.
 - Web frames arrive as BGRA and are not rotated. Frames from every camera except a back one are mirrored, as in the
   `camera` plugin's own Web preview; a laptop webcam usually has no facing mode, is reported as external and is mirrored too.
 

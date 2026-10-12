@@ -36,12 +36,14 @@ void main() {
         ),
       );
       final preview = find.byType(YuvFrameView);
-      await _waitFor(tester, () => preview.evaluate().isNotEmpty, const Duration(seconds: 30), 'round $round: the first frame to be drawn');
+      await _waitFor(tester, () => preview.evaluate().isNotEmpty, const Duration(seconds: 30), 'round $round: the preview widget');
 
       final presenter = tester.widget<YuvFrameView>(preview).presenter;
       var drawn = 0;
       void onDrawn() => drawn++;
       presenter.addListener(onDrawn);
+      await _waitFor(tester, () => drawn > 0, const Duration(seconds: 30), 'round $round: the first presenter notification');
+      drawn = 0;
       final watch = Stopwatch()..start();
       while (watch.elapsed < const Duration(seconds: 3)) {
         await tester.pump(const Duration(milliseconds: 16));

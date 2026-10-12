@@ -46,8 +46,11 @@ Requirements: Dart `^3.12.0`, Flutter `>=3.44.0`. `yuv_camera` requires
   GStreamer development libraries
   (`libgstreamer1.0-dev libgstreamer-plugins-base1.0-dev`).
 - **Web:** Chrome over localhost or HTTPS, with the browser's camera
-  permission. Frames come from `MediaStreamTrackProcessor`, with a canvas
-  fallback.
+  permission. `yuv_camera` opens a second stream on the controller's device,
+  selected by its unique, non-empty camera label; empty, missing or duplicate
+  labels fall back to the camera direction. The controller's `ResolutionPreset`
+  and optional `fps` are requested as `ideal` constraints, so the browser may
+  adjust them. Frames come from `MediaStreamTrackProcessor`, with a canvas fallback.
 
 On Android, iOS and desktop, create the `CameraController` with the plugin's
 default `imageFormatGroup`, or `ImageFormatGroup.yuv420` or
@@ -230,12 +233,12 @@ against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
 `bash tool/ci/linux.sh` on Linux; `bash tool/ci/macos.sh` and
 `bash tool/ci/ios.sh` on macOS. So far they have confirmed:
 
-- 90 example tests (`flutter test` in `example/`, run by `tool/ci/vm.ps1`, which builds `yuv_ffi.dll` from the resolved `yuv_ffi`): 68 camera, 7 device-check, 5 example navigation,
+- 108 example tests (`flutter test` in `example/`, run by `tool/ci/vm.ps1`, which builds `yuv_ffi.dll` from the resolved `yuv_ffi`): 86 camera, 7 device-check, 5 example navigation,
   4 toInputImage, 3 shape-crop screen, 2 orchestrator screen, 1 face screen.
 - The native capture integration target on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build with the fake camera platform).
 - The shape-crop and orchestrator-cycles integration targets on Windows, in Chrome (JavaScript, with a fake media
   stream), and on a physical Pixel 3 (Android 12, `arm64-v8a`).
-- The Web camera source smoke in Chrome (JavaScript) with a fake media stream.
+- The Web camera source smoke and device-choice target in Chrome (JavaScript), including two distinct fake video inputs.
 - The iOS observation in the `YuvCameraFrame` documentation: one iPhone,
   iOS 18.7, front camera, portrait and landscape.
 

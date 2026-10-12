@@ -11,6 +11,10 @@
   its lease while the app is hidden. Orchestrator notifications are asynchronous and coalesced in a microtask.
 * `onStreamStopped` on both views is called only after a stream error, never on removal or controller replacement.
   View controller binding methods are internal.
+* Web frames come from a second media stream on the controller's device, matched by its unique, non-empty camera
+  label; empty, missing or duplicate labels fall back to the camera direction. The controller's `ResolutionPreset`
+  and optional `fps` are requested as `ideal` constraints and may be adjusted by the browser.
+  Scaled or opaque browser frames are rendered through canvas at their display dimensions before pixel import.
 * Shape crop: `YuvCropTarget` (`pixels`, `fraction`, `square`), `YuvCropShape` (`rectangle`, `ellipse`), `YuvShapedImage`
   and `YuvImage.croppedToShape`; points outside the shape are painted with a fill color and are transparent in
   `toBgraBytes()`.
@@ -23,9 +27,10 @@
   and device-check screens.
 * The package has no GitHub Actions workflows: its checks are the scripts in `tool/ci/`, run directly on the
   maintainer's machines.
-* Verified locally: 90 example tests, native capture on Windows (Release) and a physical Pixel 3 (Android 12, `arm64-v8a`), the
+* Verified locally: 108 example tests, native capture on Windows (Release) and a physical Pixel 3 (Android 12, `arm64-v8a`), the
   shape-crop and orchestrator-cycles targets on Windows, in Chrome (JavaScript, fake device) and on Pixel 3, Web camera
-  source smoke in Chrome (JavaScript). Physical-camera behavior is not claimed beyond the documented iOS observation.
+  source smoke and device-choice target with two distinct fake video inputs in Chrome (JavaScript).
+  Physical-camera behavior is not claimed beyond the documented iOS observation.
 * README with package selection, platform setup (permissions, `camera_desktop` on desktop), a complete Quick start,
   ownership rules for frames and captures, and the verified-platform limits. `capture()` may return `null`; Safari,
   Firefox, `--wasm` builds and other devices are not claimed.

@@ -5,10 +5,12 @@ import 'dart:typed_data';
 import 'package:web/web.dart' as web;
 
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:yuv_ffi/yuv_ffi.dart';
 import 'package:yuv_camera/src/camera_orientation.dart';
 import 'package:yuv_camera/src/frame_read_loop.dart';
 import 'package:yuv_camera/src/stream_start.dart';
+import 'package:yuv_camera/src/web_video_constraints.dart';
 import 'package:yuv_camera/src/yuv_camera_frame.dart';
 import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
 
@@ -36,6 +38,10 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   late final web.VideoFrameCopyToOptions _bgraOptions = web.VideoFrameCopyToOptions(format: 'BGRA');
   late final web.VideoFrameCopyToOptions _rgbaOptions = web.VideoFrameCopyToOptions(format: 'RGBA');
 
+  /// The active source track, for verifying browser device selection.
+  @visibleForTesting
+  web.MediaStreamTrack? get videoTrackForTesting => _stream?.getVideoTracks().toDart.firstOrNull;
+
   @override
   Future<void> start() async {
     var generation = await Future<int>.value(_generation);
@@ -49,10 +55,18 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     _video.setAttribute('playsinline', 'true');
     await runStreamStart<web.MediaStream>(
       open: () async {
-        final constraints = web.MediaStreamConstraints(
-          audio: false.toJS,
-          video: ({'facingMode': _facingMode(controller.description.lensDirection)}.jsify() as JSAny),
+        final devices = await web.window.navigator.mediaDevices.enumerateDevices().toDart;
+        final videoInputs = [
+          for (final device in devices.toDart)
+            if (device.kind == 'videoinput' && device.deviceId.isNotEmpty) (deviceId: device.deviceId, label: device.label),
+        ];
+        final video = webVideoConstraints(
+          videoInputs: videoInputs,
+          description: controller.description,
+          resolution: controller.resolutionPreset,
+          fps: controller.mediaSettings.fps,
         );
+        final constraints = web.MediaStreamConstraints(audio: false.toJS, video: video.jsify() as JSAny);
         return (await web.window.navigator.mediaDevices.getUserMedia(constraints).toDart);
       },
       isCurrent: () => !_disposed && generation == _generation,
@@ -113,6 +127,19 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
       final width = videoFrame.displayWidth;
       final height = videoFrame.displayHeight;
       if (width <= 0 || height <= 0) return;
+      final visibleRect = videoFrame.visibleRect;
+      if (videoFrame.format == null || (visibleRect != null && (visibleRect.width != width || visibleRect.height != height))) {
+        // Opaque frames expose no format that copyTo can read; other frames
+        // may need display scaling that copyTo does not apply. Canvas renders
+        // both at the same dimensions as the preview.
+        _canvas
+          ..width = width
+          ..height = height;
+        final context = _canvas.context2D;
+        context.drawImage(videoFrame, 0, 0, width, height);
+        _deliverBgra(width, height, Uint8List.fromList(context.getImageData(0, 0, width, height).data.toDart), false);
+        return;
+      }
       // copyTo writes into the JS array; under dart2wasm `Uint8List.toJS` is a
       // copy, so the bytes are read back from the array it filled.
       final buffer = Uint8List(width * height * 4).toJS;
@@ -223,9 +250,4 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
       track.stop();
     }
   }
-
-  String _facingMode(CameraLensDirection direction) => switch (direction) {
-    CameraLensDirection.front => 'user',
-    CameraLensDirection.back || CameraLensDirection.external => 'environment',
-  };
 }
