@@ -24,13 +24,13 @@ with it; `yuv_ffi` never depends on `yuv_camera`.
 dependencies:
   yuv_camera: ^0.0.1
   yuv_ffi: ^0.5.2
-  camera: ^0.11.0+2
+  camera: ^0.12.1
   # Windows, macOS, and Linux only:
   camera_desktop: ^2.0.0
 ```
 
 Requirements: Dart `^3.12.0`, Flutter `>=3.44.0`. `yuv_camera` requires
-`yuv_ffi: ^0.5.2`.
+`yuv_ffi: ^0.5.2` and works with `camera` 0.11 and 0.12.
 
 ### Platform setup
 

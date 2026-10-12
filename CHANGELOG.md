@@ -2,7 +2,7 @@
 
 * First release of `yuv_camera`, extracted from the `yuv_ffi` example camera layer.
 * Public API: `YuvCameraView`, `YuvCameraViewController`, `YuvCameraFrame`, `YuvCameraFrameSource` and
-  `YuvTransformView`. Requires `yuv_ffi: ^0.5.2`.
+  `YuvTransformView`. Requires `yuv_ffi: ^0.5.2`; works with `camera` 0.11 and 0.12 (`>=0.11.0+2 <0.13.0`).
 * Native frame sources accept the `yuv420` and `bgra8888` image format groups (the plugin defaults); another group stops
   the stream with an `UnsupportedError`.
 * Orchestrator: `YuvCameraOrchestrator` leases the single camera through `acquire()` and `YuvCameraLease.release()`,

@@ -13,13 +13,14 @@ complete app with a capture button.
 dependencies:
   yuv_camera: ^0.0.1
   yuv_ffi: ^0.5.2
-  camera: ^0.11.0+2
+  camera: ^0.12.1
   # Windows, macOS, and Linux only:
   camera_desktop: ^2.0.0
 ```
 
-`yuv_camera` requires `yuv_ffi: ^0.5.2`, and you use `yuv_ffi` types such as `YuvImage` with it. `camera_desktop` is not a
-dependency of `yuv_camera`: your app adds it next to `camera` on desktop platforms.
+`yuv_camera` requires `yuv_ffi: ^0.5.2` and works with `camera` 0.11 and 0.12. You use `yuv_ffi` types such as
+`YuvImage` with it. `camera_desktop` is not a dependency of `yuv_camera`: your app adds it next to `camera` on desktop
+platforms.
 
 ## Step 2: set up the platform
 
