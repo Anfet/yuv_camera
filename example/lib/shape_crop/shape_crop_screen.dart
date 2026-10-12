@@ -2,7 +2,6 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:yuv_camera/yuv_camera.dart';
-import 'package:yuv_camera_example/widgets/orchestrator_state_builder.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
 
 enum _Step {
@@ -114,16 +113,19 @@ class ShapeCropScreenState extends State<ShapeCropScreen> {
     return Stack(
       fit: StackFit.expand,
       children: [
-        YuvCameraOrchestratorView(orchestrator: widget.orchestrator, viewController: _viewController),
+        YuvCameraLeaseBuilder(
+          orchestrator: widget.orchestrator,
+          builder: (context, controller) => YuvCameraView(cameraController: controller, viewController: _viewController),
+        ),
         Positioned(
           left: 0,
           right: 0,
           bottom: 24,
           child: Center(
-            child: OrchestratorStateBuilder(
-              orchestrator: widget.orchestrator,
-              builder: (context, orchestrator) => IconButton.filled(
-                onPressed: orchestrator.state == YuvCameraState.open && !_capturing ? _capture : null,
+            child: ListenableBuilder(
+              listenable: widget.orchestrator,
+              builder: (context, child) => IconButton.filled(
+                onPressed: widget.orchestrator.state == YuvCameraState.open && !_capturing ? _capture : null,
                 tooltip: 'Capture frame',
                 iconSize: 36,
                 padding: const EdgeInsets.all(20),
@@ -147,10 +149,10 @@ class ShapeCropScreenState extends State<ShapeCropScreen> {
         ),
         const SizedBox(height: 8),
         Text('${image.width}×${image.height} · ${image.format.name}', textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
-        OrchestratorStateBuilder(
-          orchestrator: widget.orchestrator,
-          builder: (context, orchestrator) =>
-              Text('Camera: ${orchestrator.state.name}', textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
+        ListenableBuilder(
+          listenable: widget.orchestrator,
+          builder: (context, child) =>
+              Text('Camera: ${widget.orchestrator.state.name}', textAlign: TextAlign.center, style: theme.textTheme.bodySmall),
         ),
         const SizedBox(height: 16),
         Wrap(

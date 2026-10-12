@@ -12,16 +12,11 @@ class YuvCameraViewController extends ChangeNotifier {
   /// Returns the next frame that is actually drawn, cropped to what is visible.
   Future<YuvImage?> capture() => _capture?.call() ?? Future<YuvImage?>.value(null);
 
-  /// Connects the view that serves [capture]; called by [YuvCameraView].
-  void attach(Future<YuvImage?> Function() capture) => _capture = capture;
+  void _attach(Future<YuvImage?> Function() capture) => _capture = capture;
 
-  /// Disconnects [capture] if it is the current one; called by [YuvCameraView].
-  void detach(Future<YuvImage?> Function() capture) {
+  void _detach(Future<YuvImage?> Function() capture) {
     if (_capture == capture) _capture = null;
   }
-
-  /// Records the geometry of the displayed frame; called by [YuvCameraView].
-  void setGeometry(YuvFrameGeometry geometry) => _setGeometry(geometry);
 
   void _setGeometry(YuvFrameGeometry? geometry) {
     if (_geometry.value == geometry) return;
@@ -35,4 +30,16 @@ class YuvCameraViewController extends ChangeNotifier {
     _geometry.dispose();
     super.dispose();
   }
+}
+
+/// Internal binding used by YuvCameraView; hidden from the package export.
+extension YuvCameraViewControllerBinding on YuvCameraViewController {
+  /// Connects the view that serves capture.
+  void attach(Future<YuvImage?> Function() capture) => _attach(capture);
+
+  /// Disconnects capture if it is the current one.
+  void detach(Future<YuvImage?> Function() capture) => _detach(capture);
+
+  /// Records the geometry of the displayed frame.
+  void setGeometry(YuvFrameGeometry geometry) => _setGeometry(geometry);
 }

@@ -54,6 +54,7 @@ void main() {
     final states = recordStates(orchestrator);
 
     final lease = await orchestrator.acquire();
+    await Future<void>.delayed(Duration.zero);
 
     expect(states, [YuvCameraState.opening, YuvCameraState.open]);
     expect(lease.controller.description.name, 'back');
@@ -150,6 +151,7 @@ void main() {
     await expectLater(second, throwsA(same(failure)));
     expect(orchestrator.state, YuvCameraState.closed);
     expect(orchestrator.error, same(failure));
+    await Future<void>.delayed(Duration.zero);
     expect(states, [YuvCameraState.opening, YuvCameraState.closed]);
     expect(platform.disposedCameras, [1]);
 
@@ -195,7 +197,7 @@ void main() {
     await disposing;
     expect(orchestrator.state, YuvCameraState.closed);
     expect(platform.disposedCameras, [1]);
-    expect(states, [YuvCameraState.opening]);
+    expect(states, isEmpty);
     await expectLater(orchestrator.acquire(), throwsStateError);
 
     final delayed = createOrchestrator(closeDelay: const Duration(hours: 1));
@@ -204,29 +206,40 @@ void main() {
     expect(platform.disposedCameras, [1, 2]);
   });
 
-  test('2i: at most one controller is alive and listeners hear only changes', () async {
+  test('2i: notifications are asynchronous, coalesced and suppressed after dispose', () async {
     final orchestrator = createOrchestrator();
     final states = recordStates(orchestrator);
-    final leases = await Future.wait([orchestrator.acquire(), orchestrator.acquire()]);
+    platform.lookupGate = Completer<void>();
+    final first = orchestrator.acquire();
+    final second = orchestrator.acquire();
+    expect(orchestrator.state, YuvCameraState.opening);
+    expect(states, isEmpty);
+    await Future<void>.value();
+    expect(states, [YuvCameraState.opening]);
+    platform.lookupGate?.complete();
+    final leases = await Future.wait([first, second]);
+    expect(orchestrator.state, YuvCameraState.open);
+    expect(states, [YuvCameraState.opening]);
     leases[0].release();
     platform.disposeGate = Completer<void>();
     leases[1].release();
-    final next = orchestrator.acquire();
+    expect(orchestrator.controller, isNull);
+    expect(orchestrator.state, YuvCameraState.closing);
+    expect(states, [YuvCameraState.opening]);
+    await Future<void>.delayed(Duration.zero);
+    // Open and closing happened before the pending notification; only the current closing state is delivered.
+    expect(states, [YuvCameraState.opening, YuvCameraState.closing]);
     platform.disposeGate?.complete();
-    (await next).release();
     await untilClosed(orchestrator);
-
-    expect(states, [
-      YuvCameraState.opening,
-      YuvCameraState.open,
-      YuvCameraState.closing,
-      YuvCameraState.closed,
-      YuvCameraState.opening,
-      YuvCameraState.open,
-      YuvCameraState.closing,
-      YuvCameraState.closed,
-    ]);
     expect(maxAliveCameras(), 1);
+
+    final disposed = createOrchestrator();
+    final suppressed = recordStates(disposed);
+    final pending = disposed.acquire();
+    final disposing = disposed.dispose();
+    await expectLater(pending, throwsStateError);
+    await disposing;
+    expect(suppressed, isEmpty);
   });
 
   test('50 overlapping acquire and release cycles leave every controller disposed once', () async {

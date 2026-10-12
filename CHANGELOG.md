@@ -7,7 +7,10 @@
   the stream with an `UnsupportedError`.
 * Orchestrator: `YuvCameraOrchestrator` leases the single camera through `acquire()` and `YuvCameraLease.release()`,
   closes it after `closeDelay`, keeps at most one controller alive, and reports `YuvCameraState`;
-  `YuvCameraOrchestratorView` leases it while mounted.
+  `YuvCameraLeaseBuilder` passes its initialized controller to a builder, retries after opening failures and releases
+  its lease while the app is hidden. Orchestrator notifications are asynchronous and coalesced in a microtask.
+* `onStreamStopped` on both views is called only after a stream error, never on removal or controller replacement.
+  View controller binding methods are internal.
 * Shape crop: `YuvCropTarget` (`pixels`, `fraction`, `square`), `YuvCropShape` (`rectangle`, `ellipse`), `YuvShapedImage`
   and `YuvImage.croppedToShape`; points outside the shape are painted with a fill color and are transparent in
   `toBgraBytes()`.
@@ -20,7 +23,7 @@
   and device-check screens.
 * The package has no GitHub Actions workflows: its checks are the scripts in `tool/ci/`, run directly on the
   maintainer's machines.
-* Verified locally: 82 example tests, native capture on Windows (Release) and a physical Pixel 3 (Android 12, `arm64-v8a`), the
+* Verified locally: 90 example tests, native capture on Windows (Release) and a physical Pixel 3 (Android 12, `arm64-v8a`), the
   shape-crop and orchestrator-cycles targets on Windows, in Chrome (JavaScript, fake device) and on Pixel 3, Web camera
   source smoke in Chrome (JavaScript). Physical-camera behavior is not claimed beyond the documented iOS observation.
 * README with package selection, platform setup (permissions, `camera_desktop` on desktop), a complete Quick start,

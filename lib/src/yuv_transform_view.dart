@@ -36,7 +36,8 @@ class YuvTransformView extends StatefulWidget {
   /// Builds an overlay in the geometry of the currently displayed image.
   final Widget Function(BuildContext context, YuvFrameGeometry geometry)? overlayBuilder;
 
-  /// Called when the frame stream stops, including after a stream error.
+  /// Called after a stream error has stopped the frame stream.
+  /// Not called when the view is removed or given another controller.
   final VoidCallback? onStreamStopped;
 
   @override

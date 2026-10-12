@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:yuv_camera/yuv_camera.dart';
-import 'package:yuv_camera_example/widgets/orchestrator_state_builder.dart';
 
 /// Opens, closes and reopens the camera of [orchestrator] and shows what the orchestrator reports.
 class OrchestratorScreen extends StatefulWidget {
@@ -26,9 +25,9 @@ class _OrchestratorScreenState extends State<OrchestratorScreen> {
           ],
         ),
       ),
-      body: OrchestratorStateBuilder(
-        orchestrator: widget.orchestrator,
-        builder: (context, orchestrator) => SafeArea(
+      body: ListenableBuilder(
+        listenable: widget.orchestrator,
+        builder: (context, child) => SafeArea(
           child: Center(
             child: ConstrainedBox(
               constraints: const BoxConstraints(maxWidth: 560),
@@ -65,7 +64,12 @@ class _OrchestratorScreenState extends State<OrchestratorScreen> {
   }
 
   Widget _buildPreview() {
-    if (_shown) return YuvCameraOrchestratorView(orchestrator: widget.orchestrator);
+    if (_shown) {
+      return YuvCameraLeaseBuilder(
+        orchestrator: widget.orchestrator,
+        builder: (context, controller) => YuvCameraView(cameraController: controller),
+      );
+    }
     return ColoredBox(
       color: Colors.black87,
       child: Center(

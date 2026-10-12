@@ -80,7 +80,8 @@ set of required checks runs again before each release.
 
 ### The preview is replaced by `Camera error: ...`
 
-- Symptom: text starting with `Camera error:` where the preview was, and `onStreamStopped` is called.
+- Symptom: text starting with `Camera error:` where the preview was, and `onStreamStopped` is called after the stream
+  error. Both preview widgets call it only after a stream error, never during removal or controller replacement.
 - Check: read the message. `Bad state: CameraController should be initialized` means the controller passed to the view was
   not initialized. Another message is a failure of the frame stream.
 - Action: pass an initialized controller. After a stream failure open the camera again with a new controller: the source

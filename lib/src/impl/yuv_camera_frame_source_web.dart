@@ -38,12 +38,14 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
 
   @override
   Future<void> start() async {
+    var generation = await Future<int>.value(_generation);
+    if (_disposed || generation != _generation) return;
     stop();
     if (_disposed || !controller.value.isInitialized) {
       if (!_disposed) onError(StateError('CameraController should be initialized'));
       return;
     }
-    final generation = _generation;
+    generation = _generation;
     _video.setAttribute('playsinline', 'true');
     await runStreamStart<web.MediaStream>(
       open: () async {

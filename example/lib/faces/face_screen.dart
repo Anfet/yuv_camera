@@ -28,15 +28,18 @@ class _FaceScreenState extends State<FaceScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
-              child: YuvCameraOrchestratorView(
+              child: YuvCameraLeaseBuilder(
                 orchestrator: widget.orchestrator,
-                onFrame: _supportsFaceDetection ? _detectFace : null,
-                overlayBuilder: (context, geometry) => switch (_faceBox) {
-                  final box? => CustomPaint(
-                    painter: FaceRectPainter(rect: box, geometry: geometry, strokeWidth: 4),
-                  ),
-                  null => const SizedBox.shrink(),
-                },
+                builder: (context, controller) => YuvCameraView(
+                  cameraController: controller,
+                  onFrame: _supportsFaceDetection ? _detectFace : null,
+                  overlayBuilder: (context, geometry) => switch (_faceBox) {
+                    final box? => CustomPaint(
+                      painter: FaceRectPainter(rect: box, geometry: geometry, strokeWidth: 4),
+                    ),
+                    null => const SizedBox.shrink(),
+                  },
+                ),
               ),
             ),
             Padding(

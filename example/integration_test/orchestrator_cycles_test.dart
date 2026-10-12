@@ -27,7 +27,14 @@ void main() {
 
     // (2)-(4) The preview twice: it keeps drawing frames, and removing it closes the camera.
     for (int round = 1; round <= 2; round++) {
-      await tester.pumpWidget(MaterialApp(home: YuvCameraOrchestratorView(orchestrator: orchestrator)));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: YuvCameraLeaseBuilder(
+            orchestrator: orchestrator,
+            builder: (context, controller) => YuvCameraView(cameraController: controller),
+          ),
+        ),
+      );
       final preview = find.byType(YuvFrameView);
       await _waitFor(tester, () => preview.evaluate().isNotEmpty, const Duration(seconds: 30), 'round $round: the first frame to be drawn');
 

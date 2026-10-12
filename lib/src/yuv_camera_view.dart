@@ -53,7 +53,8 @@ class YuvCameraView extends StatefulWidget {
   /// Builds an overlay in the geometry of the currently displayed frame.
   final Widget Function(BuildContext context, YuvFrameGeometry geometry)? overlayBuilder;
 
-  /// Called when the frame stream stops, including after a stream error.
+  /// Called after a stream error has stopped the frame stream.
+  /// Not called when the view is removed or given another controller.
   final VoidCallback? onStreamStopped;
 
   /// Reports each frame confirmed as drawn; [hasShader] is its renderer state.
@@ -187,7 +188,6 @@ class _YuvCameraViewState extends State<YuvCameraView> {
     // Frame timestamps restart with every source; an old mark would hold onFrame back until the new clock passes it.
     _lastOnFrame = null;
     _completeCapture(null);
-    widget.onStreamStopped?.call();
   }
 
   @override

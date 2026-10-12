@@ -25,10 +25,11 @@ enum YuvCameraState {
 /// that delay keeps the same controller. All transitions run one after another, so at most one controller is alive at
 /// any time: a request made while the camera is closing waits for the old controller to be disposed first.
 ///
-/// The orchestrator does not observe the app lifecycle; the app releases its leases itself when it goes to the
-/// background.
+/// The orchestrator does not observe the app lifecycle. YuvCameraLeaseBuilder releases its lease while the app is
+/// hidden; the app must release manually acquired leases itself when it goes to the background.
 ///
-/// Listeners are notified when [state] or [error] changes.
+/// Listeners are notified asynchronously in a microtask when [state] or [error] changes. Getters change immediately;
+/// one notification can cover several transitions in the same turn. No notifications are delivered after [dispose].
 class YuvCameraOrchestrator extends ChangeNotifier {
   /// Creates an orchestrator that opens the first camera facing [lensDirection], or the first camera when none does.
   ///
@@ -199,7 +200,12 @@ class YuvCameraOrchestrator extends ChangeNotifier {
   }
 
   void _notify() {
-    if (!_isDisposed) notifyListeners();
+    if (_isDisposed || _notificationScheduled) return;
+    _notificationScheduled = true;
+    scheduleMicrotask(() {
+      _notificationScheduled = false;
+      if (!_isDisposed) notifyListeners();
+    });
   }
 
   void _cancelCloseTimer() {
@@ -219,6 +225,7 @@ class YuvCameraOrchestrator extends ChangeNotifier {
   Timer? _closeTimer;
   int _pendingAcquires = 0;
   bool _isDisposed = false;
+  bool _notificationScheduled = false;
   final Set<YuvCameraLease> _leases = {};
 }
 

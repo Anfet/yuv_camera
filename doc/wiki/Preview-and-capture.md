@@ -23,9 +23,10 @@ camera can fail: `availableCameras()` may return an empty list, and `initialize(
 permission. Catch both, and check `mounted` after every `await`, as the Getting started page does.
 
 The `camera` plugin's own documentation describes how to react to the app moving to the background and back
-([`camera` on pub.dev](https://pub.dev/packages/camera)); `yuv_camera` adds nothing there. What it adds is the following:
-if you pass a different `CameraController` to an existing `YuvCameraView`, it stops the old stream (calling
-`onStreamStopped`), drops any frame and capture in flight, and starts the new one.
+([`camera` on pub.dev](https://pub.dev/packages/camera)). With your own controller, your app manages that lifecycle;
+`YuvCameraLeaseBuilder` releases its lease while hidden and acquires one again when shown. For controller replacement:
+if you pass a different `CameraController` to an existing `YuvCameraView`, it stops the old stream without calling
+`onStreamStopped`, drops any frame and capture in flight, and starts the new one.
 
 ## `YuvCameraView` at a glance
 
@@ -36,7 +37,7 @@ if you pass a different `CameraController` to an existing `YuvCameraView`, it st
 | `fit`, `alignment` | How the frame fills the space. `fit` defaults to `YuvFrameFit.cover`, which crops the picture; use `contain` to see all of it. |
 | `onFrame`, `onFrameInterval` | Your frame callback and its minimum interval (200 ms by default). See [Frame processing](https://github.com/Anfet/yuv_camera/wiki/Frame-processing). |
 | `overlayBuilder` | Builds a widget over the preview from the geometry of the displayed frame. See [Geometry and overlays](https://github.com/Anfet/yuv_camera/wiki/Geometry-and-overlays). |
-| `onStreamStopped` | Called when the stream stops, also after a stream error. |
+| `onStreamStopped` | Called only after a stream error stops the stream; not on removal or controller replacement. |
 | `onFramePresented` | Called for every frame that was confirmed as drawn; its argument says whether the shader path is in use. |
 
 ## Capture what is on screen

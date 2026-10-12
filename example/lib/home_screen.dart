@@ -4,7 +4,6 @@ import 'package:yuv_camera_example/device_check/device_check_screen.dart';
 import 'package:yuv_camera_example/faces/face_screen.dart';
 import 'package:yuv_camera_example/orchestrator/orchestrator_screen.dart';
 import 'package:yuv_camera_example/shape_crop/shape_crop_screen.dart';
-import 'package:yuv_camera_example/widgets/orchestrator_state_builder.dart';
 
 /// The list of example scenarios; every one of them takes its camera from [orchestrator].
 class HomeScreen extends StatelessWidget {
@@ -63,9 +62,9 @@ class HomeScreen extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.all(12),
-                  child: OrchestratorStateBuilder(
-                    orchestrator: orchestrator,
-                    builder: (context, orchestrator) => Text('Camera: ${orchestrator.state.name}', style: theme.textTheme.labelLarge),
+                  child: ListenableBuilder(
+                    listenable: orchestrator,
+                    builder: (context, child) => Text('Camera: ${orchestrator.state.name}', style: theme.textTheme.labelLarge),
                   ),
                 ),
               ],

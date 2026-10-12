@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:camera/camera.dart';
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yuv_camera/src/yuv_camera_frame.dart';
 import 'package:yuv_camera/src/yuv_camera_view.dart';
@@ -155,4 +156,68 @@ void main() {
     await tester.pump();
     expect(calls, 2);
   });
+  for (final transformed in [false, true]) {
+    testWidgets('${transformed ? 'transform' : 'camera'} view only reports stream errors and resumes frames on replacement', (tester) async {
+      var stopped = 0;
+      final shades = <int>[];
+      Future<void> pumpCamera(CameraController controller) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            home: StatefulBuilder(
+              builder: (context, setState) {
+                void onStopped() => setState(() => stopped++);
+                return transformed
+                    ? YuvTransformView(
+                        cameraController: controller,
+                        onStreamStopped: onStopped,
+                        transform: (frame) {
+                          shades.add(shadeOfYuv(frame.image));
+                          return frame.image;
+                        },
+                      )
+                    : YuvCameraView(
+                        cameraController: controller,
+                        onStreamStopped: onStopped,
+                        onFrame: (frame) => shades.add(shadeOfYuv(frame.image)),
+                      );
+              },
+            ),
+          ),
+        );
+        await settleCamera(tester);
+      }
+
+      await pumpCamera(camera);
+      platform.emit(camera.cameraId, cameraFrame(10));
+      await tester.pump();
+      expect(shades, [10]);
+      final replacement = CameraController(camera.description, ResolutionPreset.medium, enableAudio: false);
+      await replacement.initialize();
+      await pumpCamera(replacement);
+      expect(stopped, 0);
+      platform.emit(camera.cameraId, cameraFrame(11));
+      platform.emit(replacement.cameraId, cameraFrame(12));
+      await tester.pump();
+      expect(shades, [10, 12]);
+      await tester.pumpWidget(const SizedBox());
+      expect(stopped, 0);
+      await pumpCamera(replacement);
+      platform.emitError(replacement.cameraId, StateError('stream failed'));
+      await tester.pump();
+      await tester.pump();
+      expect(stopped, 1);
+      expect(platform.isStreaming(replacement.cameraId), isFalse);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      expect(stopped, 1);
+      await replacement.dispose();
+
+      platform.failNextStreamStart = PlatformException(code: 'startFailed');
+      await pumpCamera(camera);
+      expect(stopped, 2);
+      expect(tester.takeException(), isNull);
+      await tester.pumpWidget(const SizedBox());
+      expect(stopped, 2);
+    });
+  }
 }

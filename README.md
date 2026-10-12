@@ -108,7 +108,10 @@ class _CameraPageState extends State<CameraPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          YuvCameraOrchestratorView(orchestrator: _orchestrator, viewController: _viewController),
+          YuvCameraLeaseBuilder(
+            orchestrator: _orchestrator,
+            builder: (context, controller) => YuvCameraView(cameraController: controller, viewController: _viewController),
+          ),
           if (_captured case final image?)
             Align(
               alignment: Alignment.topRight,
@@ -124,10 +127,13 @@ class _CameraPageState extends State<CameraPage> {
 
 What the example does:
 
-- `YuvCameraOrchestratorView` takes the camera from the orchestrator while it is shown: the camera opens when the view
-  appears, and the view releases it when it is removed. The camera closes once no lease is left (after `closeDelay`,
+- `YuvCameraLeaseBuilder` takes the camera from the orchestrator and passes its initialized `CameraController` to
+  `builder`. The camera opens when the widget appears, and the widget releases it when removed or the app is hidden.
+  It acquires a lease again when the app is shown. The camera closes once no lease is left (after `closeDelay`,
   zero by default).
-- When there is no camera or the permission is denied, the view shows `Camera unavailable: …` with the error.
+- When there is no camera or permission is denied, the builder shows `Camera unavailable: …` with a `Retry` button.
+  `placeholderBuilder(context, error, retry)` can replace this content; `error` is null while opening, and `retry`
+  starts a new attempt without remounting. Calls during opening or while leased or hidden do nothing.
 - `capture()` returns the next frame that is actually drawn, cropped to what is
   visible, or `null` if the view is not attached or stops first.
 - You can still use your own `CameraController` with `YuvCameraView`; see [Main actions](#main-actions).
@@ -171,13 +177,19 @@ convert the frame in your application; the example (`example/lib/ext.dart`,
 ### Sharing one camera between screens
 
 Several screens can show the same camera through one `YuvCameraOrchestrator`. A screen calls `acquire()` for a
-`YuvCameraLease` and calls `release()` on it when it stops showing the camera; `YuvCameraOrchestratorView` does both
-while it is mounted. The first lease opens the camera, and releasing the last one closes it after `closeDelay` (zero by
-default). A lease taken within that delay keeps the same controller. At most one controller is alive at any time: a
+`YuvCameraLease` and calls `release()` on it when it stops showing the camera; `YuvCameraLeaseBuilder` does both
+while mounted and visible. Its `builder` can return `YuvCameraView`, `YuvTransformView` or a custom widget. The first
+lease opens the camera, and releasing the last one closes it after `closeDelay` (zero by default). A lease taken
+within that delay keeps the same controller. At most one controller is alive at any time: a
 request made while the camera is closing waits until the old controller is disposed.
 
-The orchestrator does not observe the app lifecycle, so the app releases its leases itself when it goes to the
-background.
+The builder releases its lease when the app is hidden and reacquires it when shown; `inactive` does not release it,
+so camera permission prompts on Android do not interrupt opening. The orchestrator does not observe the app
+lifecycle: the app must release manually acquired leases when it goes to the background.
+
+The orchestrator works with an ordinary `ListenableBuilder` anywhere in the widget tree. Notifications arrive in a
+microtask, and one notification can cover several state or error transitions in the same turn. The getters change
+immediately; listeners read their current values. No notifications arrive after `dispose()`.
 
 ### Cutting a shape out of a frame
 
@@ -218,7 +230,7 @@ against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
 `bash tool/ci/linux.sh` on Linux; `bash tool/ci/macos.sh` and
 `bash tool/ci/ios.sh` on macOS. So far they have confirmed:
 
-- 82 example tests (`flutter test` in `example/`, run by `tool/ci/vm.ps1`, which builds `yuv_ffi.dll` from the resolved `yuv_ffi`): 60 camera, 7 device-check, 5 example navigation,
+- 90 example tests (`flutter test` in `example/`, run by `tool/ci/vm.ps1`, which builds `yuv_ffi.dll` from the resolved `yuv_ffi`): 68 camera, 7 device-check, 5 example navigation,
   4 toInputImage, 3 shape-crop screen, 2 orchestrator screen, 1 face screen.
 - The native capture integration target on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build with the fake camera platform).
 - The shape-crop and orchestrator-cycles integration targets on Windows, in Chrome (JavaScript, with a fake media
