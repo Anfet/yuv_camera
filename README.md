@@ -54,11 +54,9 @@ The plugins' own documentation is the primary source for permission details:
 
 ## Quick start
 
-This complete `lib/main.dart` initializes `yuv_ffi`, finds a camera, shows the
-preview, and captures the visible frame.
+This complete `lib/main.dart` initializes `yuv_ffi`, shows the camera through an orchestrator, and captures the visible frame.
 
 ```dart
-import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:yuv_camera/yuv_camera.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
@@ -77,38 +75,9 @@ class CameraPage extends StatefulWidget {
 }
 
 class _CameraPageState extends State<CameraPage> {
+  final _orchestrator = YuvCameraOrchestrator();
   final _viewController = YuvCameraViewController();
-  CameraController? _camera;
-  Object? _error;
   YuvImage? _captured;
-
-  @override
-  void initState() {
-    super.initState();
-    _openCamera();
-  }
-
-  Future<void> _openCamera() async {
-    CameraController? controller;
-    try {
-      final cameras = await availableCameras();
-      if (!mounted) return;
-      if (cameras.isEmpty) {
-        setState(() => _error = 'No camera is available.');
-        return;
-      }
-      controller = CameraController(cameras.first, ResolutionPreset.medium, enableAudio: false);
-      await controller.initialize(); // Throws if permission is denied.
-      if (!mounted) {
-        await controller.dispose();
-        return;
-      }
-      setState(() => _camera = controller);
-    } catch (error) {
-      await controller?.dispose();
-      if (mounted) setState(() => _error = error);
-    }
-  }
 
   Future<void> _capture() async {
     final image = await _viewController.capture();
@@ -123,34 +92,25 @@ class _CameraPageState extends State<CameraPage> {
   @override
   void dispose() {
     _viewController.dispose();
-    _camera?.dispose();
+    _orchestrator.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final camera = _camera;
-    final Widget body;
-    if (_error != null) {
-      body = Center(child: Text('Camera unavailable: $_error'));
-    } else if (camera == null) {
-      body = const Center(child: CircularProgressIndicator());
-    } else {
-      body = Stack(
+    return Scaffold(
+      body: Stack(
         fit: StackFit.expand,
         children: [
-          YuvCameraView(cameraController: camera, viewController: _viewController),
+          YuvCameraOrchestratorView(orchestrator: _orchestrator, viewController: _viewController),
           if (_captured case final image?)
             Align(
               alignment: Alignment.topRight,
               child: SizedBox(width: 120, height: 160, child: YuvImageWidget(image: image)),
             ),
         ],
-      );
-    }
-    return Scaffold(
-      body: body,
-      floatingActionButton: camera == null ? null : FloatingActionButton(onPressed: _capture, child: const Icon(Icons.camera)),
+      ),
+      floatingActionButton: FloatingActionButton(onPressed: _capture, child: const Icon(Icons.camera)),
     );
   }
 }
@@ -158,15 +118,13 @@ class _CameraPageState extends State<CameraPage> {
 
 What the example does:
 
-- `YuvFfi.initialize()` prepares `yuv_ffi`; call it before the first frame.
-- `availableCameras()` can return an empty list, and `initialize()` throws when
-  the user denies the permission; both end in a message instead of a preview.
-- Every `await` is followed by a `mounted` check, and a controller created
-  after the page was closed is disposed immediately.
-- `YuvCameraView` needs an initialized `CameraController` and draws it through
-  the `yuv_ffi` frame presenter. You own the controller and dispose it.
+- `YuvCameraOrchestratorView` takes the camera from the orchestrator while it is shown: the camera opens when the view
+  appears, and the view releases it when it is removed. The camera closes once no lease is left (after `closeDelay`,
+  zero by default).
+- When there is no camera or the permission is denied, the view shows `Camera unavailable: …` with the error.
 - `capture()` returns the next frame that is actually drawn, cropped to what is
   visible, or `null` if the view is not attached or stops first.
+- You can still use your own `CameraController` with `YuvCameraView`; see [Main actions](#main-actions).
 
 ## Main actions
 
@@ -204,6 +162,46 @@ convert the frame in your application; the example (`example/lib/ext.dart`,
 `toInputImage`) packs a `YuvImage` into an `InputImage` for
 `google_mlkit_face_detection` and applies the frame's `orientation.rotation`.
 
+### Sharing one camera between screens
+
+Several screens can show the same camera through one `YuvCameraOrchestrator`. A screen calls `acquire()` for a
+`YuvCameraLease` and calls `release()` on it when it stops showing the camera; `YuvCameraOrchestratorView` does both
+while it is mounted. The first lease opens the camera, and releasing the last one closes it after `closeDelay` (zero by
+default). A lease taken within that delay keeps the same controller. At most one controller is alive at any time: a
+request made while the camera is closing waits until the old controller is disposed.
+
+The orchestrator does not observe the app lifecycle, so the app releases its leases itself when it goes to the
+background.
+
+### Cutting a shape out of a frame
+
+`croppedToShape` cuts the rectangle that a `YuvCropTarget` places in a `YuvImage` and keeps the `YuvCropShape` you
+choose inside it. The source image is left unchanged. Call it after `YuvFfi.initialize()` has completed.
+
+Targets: `YuvCropTarget.pixels(size)` is a box of exact pixels, `YuvCropTarget.fraction(left:, top:, right:, bottom:)`
+takes its edges as fractions of the image, and `YuvCropTarget.square(side)` is a square whose side is a fraction of the
+smaller image side. `pixels` and `square` also take `alignment` and `offset`.
+
+The example's Shape crop screen offers these four combinations:
+
+| Option | Target | Shape |
+| --- | --- | --- |
+| Rectangle (free width and height) | `YuvCropTarget.pixels(size)` | `YuvCropShape.rectangle` |
+| Square (equal sides) | `YuvCropTarget.square(side)` | `YuvCropShape.rectangle` |
+| Oval (vertical, face-shaped) | `YuvCropTarget.pixels(size)`, taller than wide | `YuvCropShape.ellipse` |
+| Circle (equal axes) | `YuvCropTarget.square(side)` | `YuvCropShape.ellipse` |
+
+Points outside the shape are painted with `fill` (black by default) in the result's `image`, and `toBgraBytes()` makes
+them transparent. Transparency follows the shape, not a key color.
+
+```dart
+final image = await viewController.capture();
+if (image != null) {
+  final cut = image.croppedToShape(const YuvCropTarget.square(0.5), shape: YuvCropShape.ellipse);
+  final bgra = cut.toBgraBytes(); // width * height * 4 bytes; alpha is 0 outside the circle
+}
+```
+
 ## Platforms and limits
 
 Backend availability, building, and a confirmed physical camera are different
@@ -214,8 +212,11 @@ against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
 `bash tool/ci/linux.sh` on Linux; `bash tool/ci/macos.sh` and
 `bash tool/ci/ios.sh` on macOS. So far they have confirmed:
 
-- 37 example tests (26 camera, 5 device-check, 4 `toInputImage`, 2 example navigation).
+- 78 example tests (`flutter test` in `example/`, run by `tool/ci/vm.ps1`): 56 camera, 7 device-check, 5 example navigation,
+  4 toInputImage, 3 shape-crop screen, 2 orchestrator screen, 1 face screen.
 - The native capture integration target on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build with the fake camera platform).
+- The shape-crop and orchestrator-cycles integration targets on Windows, in Chrome (JavaScript, with a fake media
+  stream), and on a physical Pixel 3 (Android 12, `arm64-v8a`).
 - The Web camera source smoke in Chrome (JavaScript) with a fake media stream.
 - The iOS observation in the `YuvCameraFrame` documentation: one iPhone,
   iOS 18.7, front camera, portrait and landscape.
@@ -228,8 +229,8 @@ Safari and Firefox), `--wasm` builds, and devices are not claimed.
 
 - [Wiki](https://github.com/Anfet/yuv_camera/wiki): step-by-step guides for
   preview, capture, frame processing, geometry, and platform troubleshooting.
-- [Example app](example/README.md): a camera screen with capture, an ML Kit
-  face-detection screen, and a device-check screen.
+- [Example app](example/README.md): a home screen with shape crop, open-and-close,
+  ML Kit face-detection, and device-check screens.
 - [API reference](https://pub.dev/documentation/yuv_camera/latest/) for every
   public class and parameter.
 - [CHANGELOG.md](CHANGELOG.md).

@@ -11,3 +11,7 @@ cd "$repo_root/example"
 flutter pub get
 "$script_dir/drive.sh" integration_test/camera_source_web_smoke_test.dart web-server --browser-name=chrome --headless --web-browser-flag=--use-fake-device-for-media-stream --web-browser-flag=--use-fake-ui-for-media-stream --no-pub
 echo 'PASS Chrome JavaScript camera source smoke.'
+"$script_dir/drive.sh" integration_test/shape_crop_test.dart web-server --browser-name=chrome --headless --web-browser-flag=--use-fake-device-for-media-stream --web-browser-flag=--use-fake-ui-for-media-stream --no-pub
+echo 'PASS Chrome shape crop target.'
+"$script_dir/drive.sh" integration_test/orchestrator_cycles_test.dart web-server --browser-name=chrome --headless --web-browser-flag=--use-fake-device-for-media-stream --web-browser-flag=--use-fake-ui-for-media-stream --no-pub
+echo 'PASS Chrome orchestrator cycles target.'

@@ -121,7 +121,8 @@ fills it from the platform:
 | Platform | Orientation of the raw frame |
 | --- | --- |
 | Android | Computed from the camera's sensor orientation and the device orientation (below). |
-| iOS, Windows, macOS, Linux, Web | Upright and not mirrored: no rotation is applied. |
+| Windows, Web | Not rotated. Mirrored for every camera except a back one, as the camera plugins' own previews are. On Windows `camera_desktop` reports every camera as front; in a browser a camera without a facing mode, such as a laptop webcam, is reported as external. |
+| iOS, macOS, Linux | Upright and not mirrored: no rotation is applied. |
 
 On Android the device orientation maps to degrees (`portraitUp` 0, `landscapeLeft` 90, `portraitDown` 180,
 `landscapeRight` 270) and the camera direction decides the rest:
@@ -131,8 +132,8 @@ On Android the device orientation maps to degrees (`portraitUp` 0, `landscapeLef
 | Front | `(sensorOrientation + deviceDegrees) % 360` | Yes |
 | Back or external | `(sensorOrientation - deviceDegrees + 360) % 360` | No |
 
-For example a back camera whose sensor orientation is 90 in `portraitUp` gets rotation 90. These formulas are covered by
-the package's unit tests. The iOS behavior was observed with the front camera on one iPhone running iOS 18.7 in portrait
+For example a back camera whose sensor orientation is 90 in `portraitUp` gets rotation 90. These formulas and the Windows and Web
+rule are covered by the package's unit tests. The iOS behavior was observed with the front camera on one iPhone running iOS 18.7 in portrait
 and landscape; that observation is limited to that configuration, and no other device or platform is claimed beyond the
 [verified list](https://github.com/Anfet/yuv_camera/wiki/Platforms-and-troubleshooting#what-is-verified).
 

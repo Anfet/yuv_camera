@@ -11,6 +11,9 @@ import '../support/fake_camera.dart';
 void main() {
   late FakeCameraPlatform platform;
 
+  // The host frames are mirrored on Windows, so capture() crops through the native backend.
+  setUpAll(YuvFfi.initialize);
+
   setUp(() {
     platform = FakeCameraPlatform();
     CameraPlatform.instance = platform;

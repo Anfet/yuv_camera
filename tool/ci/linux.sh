@@ -7,3 +7,5 @@ if [[ ! -d linux ]]; then flutter create --platforms=linux .; fi
 flutter pub get
 flutter build linux --debug
 bash "$repository_root/tool/ci/drive.sh" integration_test/camera_capture_native_test.dart linux
+bash "$repository_root/tool/ci/drive.sh" integration_test/shape_crop_test.dart linux
+bash "$repository_root/tool/ci/drive.sh" integration_test/orchestrator_cycles_test.dart linux

@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:camera/camera.dart';
+import 'package:yuv_camera/yuv_camera.dart';
+import 'package:yuv_camera_example/home_screen.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
-import 'package:yuv_camera_example/camera_screen.dart';
-import 'package:yuv_camera_example/capture_result_screen.dart';
-import 'package:yuv_camera_example/device_check/device_check_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -10,45 +10,28 @@ Future<void> main() async {
   runApp(const MainApp());
 }
 
-class MainApp extends StatelessWidget {
+/// The example app. It owns the one [YuvCameraOrchestrator] that every screen takes its camera from.
+class MainApp extends StatefulWidget {
   const MainApp({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const MaterialApp(home: _HomeScreen());
-  }
+  State<MainApp> createState() => _MainAppState();
 }
 
-class _HomeScreen extends StatefulWidget {
-  const _HomeScreen();
-
-  @override
-  State<_HomeScreen> createState() => _HomeScreenState();
-}
-
-class _HomeScreenState extends State<_HomeScreen> {
+class _MainAppState extends State<MainApp> {
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('YUV Camera')),
-      body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            FilledButton(onPressed: _takePhoto, child: const Text('Take photo')),
-            FilledButton(
-              onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const DeviceCheckScreen())),
-              child: const Text('Device check'),
-            ),
-          ],
-        ),
-      ),
+    return MaterialApp(
+      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0E6B64))),
+      home: HomeScreen(orchestrator: _orchestrator),
     );
   }
 
-  Future<void> _takePhoto() async {
-    final frame = await Navigator.of(context).push<YuvImage>(MaterialPageRoute(builder: (_) => const CameraScreen()));
-    if (!mounted || frame == null) return;
-    await Navigator.of(context).push<void>(MaterialPageRoute(builder: (_) => CaptureResultScreen(image: frame)));
+  @override
+  void dispose() {
+    _orchestrator.dispose().ignore();
+    super.dispose();
   }
+
+  final YuvCameraOrchestrator _orchestrator = YuvCameraOrchestrator(lensDirection: CameraLensDirection.front, fps: 30);
 }

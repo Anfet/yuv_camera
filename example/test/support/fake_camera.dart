@@ -204,3 +204,11 @@ Future<void> settleDecodes(WidgetTester tester) async {
   await tester.pump(Duration.zero);
   await tester.pump();
 }
+
+/// The fake camera answers in microtasks; real time lets the opening, the frame stream and a closing run to their end.
+Future<void> settleCamera(WidgetTester tester) async {
+  for (int i = 0; i < 3; i++) {
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+    await tester.pump();
+  }
+}

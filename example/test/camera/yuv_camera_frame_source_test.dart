@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:yuv_camera/src/yuv_camera_frame.dart';
 import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
+import 'package:yuv_ffi/yuv_ffi.dart';
 
 import '../support/fake_camera.dart';
 
@@ -42,6 +43,16 @@ void main() {
     platform.emitError(controller.cameraId, StateError('camera failed'));
     await Future<void>.delayed(Duration.zero);
     expect(errors, hasLength(1));
+    source.dispose();
+  });
+
+  test('Windows front-camera frames are mirrored and not rotated', () async {
+    final frames = <YuvCameraFrame>[];
+    final source = YuvCameraFrameSource(controller, onFrame: frames.add, onError: (_) {});
+    await source.start();
+    platform.emit(controller.cameraId, cameraFrame(12));
+    await Future<void>.delayed(Duration.zero);
+    expect(frames.single.orientation, const YuvFrameOrientation(mirrored: true));
     source.dispose();
   });
 }

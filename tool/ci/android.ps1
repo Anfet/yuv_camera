@@ -50,41 +50,54 @@ $androidRelease = (Invoke-AdbShell 'getprop ro.build.version.release').Trim()
 Write-Output "Android device: $serial; model=$model; android=$androidRelease; abis=$abilist"
 
 $packageName = 'dev.yuv.yuv_camera_example'
-$target = 'integration_test/camera_capture_native_test.dart'
+$targets = @(
+  'integration_test/camera_capture_native_test.dart',
+  'integration_test/orchestrator_cycles_test.dart',
+  'integration_test/shape_crop_test.dart'
+)
 $apk = 'build/app/outputs/flutter-apk/app-debug.apk'
 
 $repositoryRoot = Get-CameraRepositoryRoot
 Push-Location (Join-Path $repositoryRoot 'example')
 try {
   Invoke-CameraCommand flutter 'pub', 'get'
-
-  $packageInfo = (& $adb -s $serial shell dumpsys package $packageName 2>&1 | ForEach-Object { $_.ToString() }) -join "`n"
-  if ($LASTEXITCODE -ne 0) {
-    throw "Unable to read installed package information (adb exit code $LASTEXITCODE)."
-  }
-  if ($packageInfo -match '(?im)^\s*Unable to find package:') {
-    $installed = [long]0
-  } else {
-    $versionMatches = [regex]::Matches($packageInfo, '(?m)^\s*versionCode=(\d+)(?:\s|$)')
-    if ($versionMatches.Count -ne 1) {
-      throw "Unable to determine one installed versionCode; found $($versionMatches.Count) versionCode entries."
-    }
-    $installed = [long]$versionMatches[0].Groups[1].Value
-  }
-  $buildNumber = $installed + 1
-  Invoke-CameraCommand flutter 'build', 'apk', '--debug', "--target=$target", '--target-platform', 'android-arm64', "--build-number=$buildNumber"
-
-  $installOutput = @(& $adb -s $serial install -r (Resolve-Path -LiteralPath $apk).Path 2>&1 | ForEach-Object { $_.ToString() })
-  if ($LASTEXITCODE -ne 0 -or -not ($installOutput | Where-Object { $_ -match 'Success' })) {
-    throw "BLOCKED: adb install -r failed on $serial for ${packageName}: $($installOutput | Select-Object -Last 1). The script never removes apps or clears data; Engineer decides."
-  }
 } finally {
   Pop-Location
 }
 
-try {
-  & (Join-Path $PSScriptRoot 'drive.ps1') $target $serial '--no-pub' '--keep-app-running' "--use-application-binary=$apk"
-} finally {
-  & $adb -s $serial shell am force-stop $packageName
+foreach ($target in $targets) {
+  # One debug APK per target: its versionCode is the installed one plus one, so `adb install -r` always upgrades.
+  Push-Location (Join-Path $repositoryRoot 'example')
+  try {
+    $packageInfo = (& $adb -s $serial shell dumpsys package $packageName 2>&1 | ForEach-Object { $_.ToString() }) -join "`n"
+    if ($LASTEXITCODE -ne 0) {
+      throw "Unable to read installed package information (adb exit code $LASTEXITCODE)."
+    }
+    if ($packageInfo -match '(?im)^\s*Unable to find package:') {
+      $installed = [long]0
+    } else {
+      $versionMatches = [regex]::Matches($packageInfo, '(?m)^\s*versionCode=(\d+)(?:\s|$)')
+      if ($versionMatches.Count -ne 1) {
+        throw "Unable to determine one installed versionCode; found $($versionMatches.Count) versionCode entries."
+      }
+      $installed = [long]$versionMatches[0].Groups[1].Value
+    }
+    $buildNumber = $installed + 1
+    Write-Output "Android target: $target; installed versionCode=$installed; building versionCode=$buildNumber"
+    Invoke-CameraCommand flutter 'build', 'apk', '--debug', "--target=$target", '--target-platform', 'android-arm64', "--build-number=$buildNumber"
+
+    $installOutput = @(& $adb -s $serial install -r (Resolve-Path -LiteralPath $apk).Path 2>&1 | ForEach-Object { $_.ToString() })
+    if ($LASTEXITCODE -ne 0 -or -not ($installOutput | Where-Object { $_ -match 'Success' })) {
+      throw "BLOCKED: adb install -r failed on $serial for ${packageName}: $($installOutput | Select-Object -Last 1). The script never removes apps or clears data; Engineer decides."
+    }
+  } finally {
+    Pop-Location
+  }
+
+  try {
+    & (Join-Path $PSScriptRoot 'drive.ps1') $target $serial '--no-pub' '--keep-app-running' "--use-application-binary=$apk"
+  } finally {
+    & $adb -s $serial shell am force-stop $packageName
+  }
+  Write-Output "PASS $target on $model ($serial)."
 }
-Write-Output "PASS $target on $model ($serial)."

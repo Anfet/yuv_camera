@@ -10,3 +10,9 @@ try {
 & (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/camera_capture_native_test.dart' 'windows' '--no-pub'
 if ($LASTEXITCODE -ne 0) { throw "Windows capture target failed with exit code $LASTEXITCODE" }
 Write-Output 'PASS Windows release build and native camera capture target.'
+& (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/shape_crop_test.dart' 'windows' '--no-pub'
+if ($LASTEXITCODE -ne 0) { throw "Windows shape crop target failed with exit code $LASTEXITCODE" }
+Write-Output 'PASS Windows shape crop target.'
+& (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/orchestrator_cycles_test.dart' 'windows' '--no-pub'
+if ($LASTEXITCODE -ne 0) { throw "Windows orchestrator cycles target failed with exit code $LASTEXITCODE" }
+Write-Output 'PASS Windows orchestrator cycles target.'

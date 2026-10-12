@@ -6,6 +6,7 @@ import 'package:web/web.dart' as web;
 
 import 'package:camera/camera.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
+import 'package:yuv_camera/src/camera_orientation.dart';
 import 'package:yuv_camera/src/frame_read_loop.dart';
 import 'package:yuv_camera/src/stream_start.dart';
 import 'package:yuv_camera/src/yuv_camera_frame.dart';
@@ -167,7 +168,7 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
         width: width,
         height: height,
         format: YuvPixelFormat.bgra8888,
-        orientation: YuvFrameOrientation.upright,
+        orientation: mirroredUnlessBackOrientation(controller.description.lensDirection),
         timestamp: _clock.elapsed,
         load: () {
           final image = YuvImage.bgra(width, height);

@@ -31,13 +31,17 @@ The `camera` package restricts `CameraController.startImageStream` to Android an
 from the platform interface (`CameraPlatform.instance.onStreamedFrameAvailable`) directly, which is how desktop frames
 reach `onFrame`, `YuvCameraFrameSource` and the preview. You do not call `startImageStream` yourself.
 
+On Windows, frames from every camera except a back one are mirrored and not rotated, as in the `camera_desktop` preview,
+which reports every Windows camera as front. On macOS and Linux the package applies no rotation and no mirror.
+
 ### Web
 
 - Browsers expose the camera only in a secure context: serve the app from `localhost` or over HTTPS, and let the user
   grant the camera permission ([MDN: `getUserMedia`](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)).
 - Frames come from `MediaStreamTrackProcessor`. Where the browser does not provide it, the source reads frames from a canvas
   instead. The front camera is requested as `user`, back and external cameras as `environment`.
-- Web frames arrive as BGRA and upright.
+- Web frames arrive as BGRA and are not rotated. Frames from every camera except a back one are mirrored, as in the
+  `camera` plugin's own Web preview; a laptop webcam usually has no facing mode, is reported as external and is mirrored too.
 
 ## What is verified
 

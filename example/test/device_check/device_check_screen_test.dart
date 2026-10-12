@@ -1,10 +1,15 @@
+import 'dart:async';
 import 'dart:convert';
 
+import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:yuv_camera/yuv_camera.dart';
 import 'package:yuv_camera_example/device_check/device_check_report.dart';
 import 'package:yuv_camera_example/device_check/device_check_screen.dart';
+
+import '../support/fake_camera.dart';
 
 void main() {
   testWidgets('skip completes every step and copies the final JSON', (tester) async {
@@ -97,5 +102,47 @@ void main() {
 
     expect(find.text('Does the captured frame in the corner match the preview: same rotation, same mirror side, same framing?'), findsOneWidget);
     expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('the camera goes back to the orchestrator after the last step', (tester) async {
+    final platform = FakeCameraPlatform();
+    CameraPlatform.instance = platform;
+    final orchestrator = YuvCameraOrchestrator();
+    await tester.pumpWidget(MaterialApp(home: DeviceCheckScreen(orchestrator: orchestrator)));
+    await settleCamera(tester);
+    expect(orchestrator.state, YuvCameraState.open);
+
+    for (int index = 0; index < 7; index++) {
+      await tester.tap(find.text('Skip'));
+      await tester.pump();
+    }
+    await settleCamera(tester);
+
+    expect(find.text('Device check result'), findsOneWidget);
+    expect(platform.disposedCameras, [1]);
+    expect(orchestrator.state, YuvCameraState.closed);
+  });
+
+  testWidgets('a camera that opens after the last step is given back while the result is shown', (tester) async {
+    final platform = FakeCameraPlatform()..initializeGate = Completer<void>();
+    CameraPlatform.instance = platform;
+    final orchestrator = YuvCameraOrchestrator();
+    await tester.pumpWidget(MaterialApp(home: DeviceCheckScreen(orchestrator: orchestrator)));
+    await settleCamera(tester);
+    expect(orchestrator.state, YuvCameraState.opening);
+
+    for (int index = 0; index < 7; index++) {
+      await tester.tap(find.text('Skip'));
+      await tester.pump();
+    }
+    expect(find.text('Device check result'), findsOneWidget);
+
+    platform.initializeGate!.complete();
+    await settleCamera(tester);
+
+    expect(find.text('Device check result'), findsOneWidget);
+    expect(platform.createdCameras, greaterThan(0));
+    expect(platform.disposedCameras, hasLength(platform.createdCameras));
+    expect(orchestrator.state, YuvCameraState.closed);
   });
 }

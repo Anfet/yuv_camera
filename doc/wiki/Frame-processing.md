@@ -30,8 +30,9 @@ again returns the same object.
 | `frame.image` | You pass the frame to a library that takes the raw pixels together with a rotation (ML Kit does), or you only read planes. Combine it with `frame.orientation`. |
 | `frame.upright()` | You work on pixels yourself and want the picture the right way up: measuring, filters, crops, saving. The first call copies, packs and rotates the frame, so call it once per frame and reuse the result. |
 
-On Android the orientation is derived from the sensor and the device orientation; elsewhere frames arrive upright. The
-rules are in [Geometry and overlays](https://github.com/Anfet/yuv_camera/wiki/Geometry-and-overlays#how-orientation-is-derived).
+On Android the orientation is derived from the sensor and the device orientation. On Windows and Web frames are not
+rotated and are mirrored for every camera except a back one; on iOS, macOS and Linux they arrive upright and not
+mirrored. The rules are in [Geometry and overlays](https://github.com/Anfet/yuv_camera/wiki/Geometry-and-overlays#how-orientation-is-derived).
 
 ## Do not mutate a delivered frame
 

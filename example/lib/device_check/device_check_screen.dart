@@ -15,7 +15,10 @@ import 'package:yuv_camera_example/widgets/face_rect_paint.dart';
 
 /// Guided on-device validation for the release checklist.
 class DeviceCheckScreen extends StatefulWidget {
-  const DeviceCheckScreen({super.key, this.cameraEnabled = true});
+  const DeviceCheckScreen({super.key, this.orchestrator, this.cameraEnabled = true}) : assert(!cameraEnabled || orchestrator != null);
+
+  /// Owner of the camera the check leases; required unless [cameraEnabled] is `false`.
+  final YuvCameraOrchestrator? orchestrator;
 
   final bool cameraEnabled;
 
@@ -71,7 +74,7 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
   final List<DeviceCheckStepResult> _results = [];
   final List<Duration> _blurDurations = [];
   final TextEditingController _notesController = TextEditingController();
-  CameraController? _cameraController;
+  YuvCameraLease? _lease;
   FaceDetector? _faceDetector;
   CameraDescription? _camera;
   Rect? _faceBox;
@@ -103,7 +106,7 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
   void dispose() {
     _viewController.dispose();
     _faceDetector?.close().ignore();
-    _cameraController?.dispose();
+    _lease?.release();
     _capturePresenter?.dispose();
     _notesController.dispose();
     super.dispose();
@@ -152,12 +155,13 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
   Widget _buildPreview() {
     if (!widget.cameraEnabled) return const ColoredBox(color: Colors.black);
     if (_cameraError case final error?) return Center(child: Text('Camera error: $error'));
-    if (!_cameraReady) return const Center(child: CircularProgressIndicator());
+    final lease = _lease;
+    if (!_cameraReady || lease == null) return const Center(child: CircularProgressIndicator());
     return Stack(
       fit: StackFit.expand,
       children: [
         YuvCameraView(
-          cameraController: _cameraController!,
+          cameraController: lease.controller,
           viewController: _viewController,
           onFrame: _handleFrame,
           onFramePresented: _onFramePresented,
@@ -257,18 +261,17 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
 
   Future<void> _initializeCamera() async {
     try {
-      final cameras = await availableCameras();
-      if (cameras.isEmpty) throw StateError('No cameras available on device');
-      final camera = cameras.firstWhere((value) => value.lensDirection == CameraLensDirection.front, orElse: () => cameras.first);
-      final controller = CameraController(camera, ResolutionPreset.medium, enableAudio: false, fps: 30);
-      await controller.initialize();
-      if (!mounted) {
-        controller.dispose();
+      final orchestrator = widget.orchestrator;
+      if (orchestrator == null) throw StateError('The device check needs a camera orchestrator.');
+      final lease = await orchestrator.acquire();
+      // A lease that arrives after the last step has no preview to serve; the result screen is already shown.
+      if (!mounted || _results.length == _steps.length) {
+        lease.release();
         return;
       }
       setState(() {
-        _camera = camera;
-        _cameraController = controller;
+        _camera = lease.controller.description;
+        _lease = lease;
         _cameraReady = true;
       });
     } catch (error) {
@@ -359,10 +362,17 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
   }
 
   void _advance(DeviceCheckStepResult result) {
+    final lease = _lease;
     setState(() {
       _awaitingAnswer = false;
       _results.add(result);
-      if (_results.length < _steps.length) _stepIndex++;
+      if (_results.length < _steps.length) {
+        _stepIndex++;
+      } else {
+        // The result screen replaces the preview in this frame; the camera goes back once the preview is unmounted.
+        _lease = null;
+        WidgetsBinding.instance.addPostFrameCallback((_) => lease?.release());
+      }
     });
     if (_results.length == _steps.length) _log('Device check result ${_report.json}');
   }
