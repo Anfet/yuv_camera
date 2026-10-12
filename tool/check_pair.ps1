@@ -9,9 +9,10 @@ and example that point `yuv_ffi` at the YUV checkout, runs the pair checks, and 
 also when a check fails. An existing override is never overwritten: the script stops before any check and says why.
 It does not switch branches and does not change either checkout other than the ignored overrides and tool outputs.
 
-Checks: `flutter analyze` in the camera root and in `example`, `flutter test` in `example`, `tool/ci/windows.ps1` and
-`tool/ci/web.ps1` of the camera checkout. The unpublished pair resolves `yuv_ffi` only through these overrides; the
-published pair (no overrides) is checked in release stage 3.
+Checks: `flutter analyze` in the camera root and in `example`, `tool/ci/vm.ps1` (`flutter test` in `example` with a
+`yuv_ffi.dll` built from the YUV checkout), `tool/ci/windows.ps1` and `tool/ci/web.ps1` of the camera checkout. The
+unpublished pair resolves `yuv_ffi` only through these overrides; the published pair (no overrides) is checked in
+release stage 3.
 
 .EXAMPLE
 pwsh -File tool/check_pair.ps1 -CameraPath D:\.projects\yuv\yuv_camera -CameraSha <40-hex> -YuvPath D:\.projects\yuv\yuv_ffi -YuvSha <40-hex>
@@ -133,7 +134,7 @@ try {
   Assert-ResolvedPath (Join-Path $camera 'example') 'yuv_camera' $camera
   Invoke-Step 'analyze (root)' $camera 'flutter' 'analyze'
   Invoke-Step 'analyze (example)' (Join-Path $camera 'example') 'flutter' 'analyze'
-  Invoke-Step 'test (example)' (Join-Path $camera 'example') 'flutter' 'test'
+  Invoke-Step 'example tests (vm.ps1)' $camera 'pwsh' '-NoProfile' '-File' 'tool/ci/vm.ps1'
   Invoke-Step 'native capture (windows.ps1)' $camera 'pwsh' '-NoProfile' '-File' 'tool/ci/windows.ps1'
   Invoke-Step 'Web source smoke (web.ps1)' $camera 'pwsh' '-NoProfile' '-File' 'tool/ci/web.ps1'
 

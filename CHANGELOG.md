@@ -3,6 +3,8 @@
 * First release of `yuv_camera`, extracted from the `yuv_ffi` example camera layer.
 * Public API: `YuvCameraView`, `YuvCameraViewController`, `YuvCameraFrame`, `YuvCameraFrameSource` and
   `YuvTransformView`. Requires `yuv_ffi: ^0.5.2`.
+* Native frame sources accept the `yuv420` and `bgra8888` image format groups (the plugin defaults); another group stops
+  the stream with an `UnsupportedError`.
 * Orchestrator: `YuvCameraOrchestrator` leases the single camera through `acquire()` and `YuvCameraLease.release()`,
   closes it after `closeDelay`, keeps at most one controller alive, and reports `YuvCameraState`;
   `YuvCameraOrchestratorView` leases it while mounted.
@@ -18,7 +20,7 @@
   and device-check screens.
 * The package has no GitHub Actions workflows: its checks are the scripts in `tool/ci/`, run directly on the
   maintainer's machines.
-* Verified locally: 78 example tests, native capture on Windows (Release) and a physical Pixel 3 (Android 12, `arm64-v8a`), the
+* Verified locally: 82 example tests, native capture on Windows (Release) and a physical Pixel 3 (Android 12, `arm64-v8a`), the
   shape-crop and orchestrator-cycles targets on Windows, in Chrome (JavaScript, fake device) and on Pixel 3, Web camera
   source smoke in Chrome (JavaScript). Physical-camera behavior is not claimed beyond the documented iOS observation.
 * README with package selection, platform setup (permissions, `camera_desktop` on desktop), a complete Quick start,

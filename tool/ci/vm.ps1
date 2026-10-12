@@ -5,5 +5,6 @@ $root = Get-CameraRepositoryRoot
 Push-Location (Join-Path $root 'example')
 try {
   Invoke-CameraCommand flutter 'pub', 'get'
+  Add-CameraYuvFfiLibrary (Get-Location).Path
   Invoke-CameraCommand flutter 'test'
 } finally { Pop-Location }

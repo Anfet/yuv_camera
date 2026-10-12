@@ -13,6 +13,10 @@ import 'package:yuv_camera/src/yuv_camera_view_controller.dart';
 /// painting; use an isolate when the operation supports it.
 class YuvCameraView extends StatefulWidget {
   /// Creates a preview for [cameraController], which must be initialized.
+  ///
+  /// On native platforms the controller's `imageFormatGroup` must be the plugin default, `ImageFormatGroup.yuv420` or
+  /// `ImageFormatGroup.bgra8888`; another group stops the stream with an [UnsupportedError] on the first frame, and the
+  /// view shows the error.
   const YuvCameraView({
     super.key,
     required this.cameraController,
@@ -180,6 +184,8 @@ class _YuvCameraViewState extends State<YuvCameraView> {
     _source = null;
     _presenter.reset();
     _presentedCandidate = null;
+    // Frame timestamps restart with every source; an old mark would hold onFrame back until the new clock passes it.
+    _lastOnFrame = null;
     _completeCapture(null);
     widget.onStreamStopped?.call();
   }

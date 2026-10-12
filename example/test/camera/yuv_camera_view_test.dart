@@ -64,6 +64,41 @@ void main() {
     expect(calls, 2);
   });
 
+  testWidgets('onFrame resumes at once after the cameraController is replaced', (tester) async {
+    var calls = 0;
+    await pumpView(tester, onFrame: (_) => calls++);
+    platform.emit(camera.cameraId, cameraFrame(10));
+    await tester.pump();
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 400)));
+    platform.emit(camera.cameraId, cameraFrame(11));
+    await tester.pump();
+    expect(calls, 2);
+
+    final replacement = CameraController((await availableCameras()).first, ResolutionPreset.medium, enableAudio: false);
+    await replacement.initialize();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: YuvCameraView(cameraController: replacement, onFrame: (_) => calls++),
+      ),
+    );
+    await settleCamera(tester);
+    platform.emit(replacement.cameraId, cameraFrame(12));
+    await tester.pump();
+    expect(calls, 3);
+
+    await tester.pumpWidget(const SizedBox());
+    await replacement.dispose();
+  });
+
+  testWidgets('an unsupported image format group stops the stream and shows the error', (tester) async {
+    await pumpView(tester);
+    platform.emit(camera.cameraId, nv21Frame());
+    await tester.pump();
+    await tester.pump();
+    expect(find.textContaining('Camera error: Unsupported operation: Unsupported camera image format'), findsOneWidget);
+    expect(platform.isStreaming(camera.cameraId), isFalse);
+  });
+
   testWidgets('capture waiting for a drawn frame completes null when the view stops', (tester) async {
     final controller = YuvCameraViewController();
     await pumpView(tester, controller: controller);

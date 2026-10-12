@@ -35,6 +35,12 @@ void main() {
     expect(() => const YuvCropTarget.square(1.01).place(image), throwsArgumentError);
   });
 
+  test('rejects a non-finite alignment or offset', () {
+    expect(() => const YuvCropTarget.pixels(Size(100, 100), offset: Offset(double.nan, 0)).place(image), throwsArgumentError);
+    expect(() => const YuvCropTarget.square(.5, offset: Offset(0, double.infinity)).place(image), throwsArgumentError);
+    expect(() => const YuvCropTarget.square(.5, alignment: Alignment(double.nan, 0)).place(image), throwsArgumentError);
+  });
+
   test('rejects fraction edges that are out of order or outside [0, 1]', () {
     expect(() => const YuvCropTarget.fraction(left: .5, right: .5).place(image), throwsArgumentError);
     expect(() => const YuvCropTarget.fraction(top: .6, bottom: .4).place(image), throwsArgumentError);

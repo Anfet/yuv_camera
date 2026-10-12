@@ -32,3 +32,4 @@ migrate_working_dir/
 /tool/
 /doc/
 /test/
+/example/lib/camera_desktop_smoke_main.dart

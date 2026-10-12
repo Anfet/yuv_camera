@@ -37,9 +37,10 @@ Requirements: Dart `^3.12.0`, Flutter `>=3.44.0`. `yuv_camera` requires
 - **Android:** the `camera` plugin requests the camera permission at run time.
   `yuv_ffi` requires Android API 26, so set `minSdk` to 26 or higher.
 - **iOS:** add `NSCameraUsageDescription` with a short reason to
-  `ios/Runner/Info.plist`.
+  `ios/Runner/Info.plist`. `yuv_ffi` requires iOS 13 or later.
 - **Windows, macOS, Linux:** add `camera_desktop` next to `camera`.
-  `yuv_camera` does not depend on it or register it. macOS needs
+  `yuv_camera` does not depend on it or register it. macOS 10.15 or later
+  (required by `yuv_ffi`) needs
   `NSCameraUsageDescription` and the `com.apple.security.device.camera`
   entitlement in each entitlements file you ship. Linux builds need the
   GStreamer development libraries
@@ -47,6 +48,11 @@ Requirements: Dart `^3.12.0`, Flutter `>=3.44.0`. `yuv_camera` requires
 - **Web:** Chrome over localhost or HTTPS, with the browser's camera
   permission. Frames come from `MediaStreamTrackProcessor`, with a canvas
   fallback.
+
+On Android, iOS and desktop, create the `CameraController` with the plugin's
+default `imageFormatGroup`, or `ImageFormatGroup.yuv420` or
+`ImageFormatGroup.bgra8888`. Another group, such as `ImageFormatGroup.nv21`,
+stops the frame stream with an `UnsupportedError` on the first frame.
 
 The plugins' own documentation is the primary source for permission details:
 [`camera`](https://pub.dev/packages/camera) and
@@ -212,7 +218,7 @@ against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
 `bash tool/ci/linux.sh` on Linux; `bash tool/ci/macos.sh` and
 `bash tool/ci/ios.sh` on macOS. So far they have confirmed:
 
-- 78 example tests (`flutter test` in `example/`, run by `tool/ci/vm.ps1`): 56 camera, 7 device-check, 5 example navigation,
+- 82 example tests (`flutter test` in `example/`, run by `tool/ci/vm.ps1`, which builds `yuv_ffi.dll` from the resolved `yuv_ffi`): 60 camera, 7 device-check, 5 example navigation,
   4 toInputImage, 3 shape-crop screen, 2 orchestrator screen, 1 face screen.
 - The native capture integration target on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build with the fake camera platform).
 - The shape-crop and orchestrator-cycles integration targets on Windows, in Chrome (JavaScript, with a fake media

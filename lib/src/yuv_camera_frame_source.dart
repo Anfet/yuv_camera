@@ -9,6 +9,9 @@ abstract interface class YuvCameraFrameSource {
   ///
   /// [controller] must be initialized. [onFrame] receives every frame; [onError] receives a stream failure after which the
   /// source has stopped.
+  ///
+  /// On native platforms the controller's `imageFormatGroup` must be the plugin default, `ImageFormatGroup.yuv420` or
+  /// `ImageFormatGroup.bgra8888`; another group stops the source with an [UnsupportedError] on the first frame.
   factory YuvCameraFrameSource(
     CameraController controller, {
     required void Function(YuvCameraFrame frame) onFrame,

@@ -30,6 +30,17 @@ CameraImageData cameraFrame(int shade, {int rowPadding = 0}) {
   );
 }
 
+/// A frame in a group the sources do not accept, the way Android delivers `ImageFormatGroup.nv21`.
+CameraImageData nv21Frame() {
+  final bytes = Uint8List(frameWidth * frameHeight * 3 ~/ 2);
+  return CameraImageData(
+    format: const CameraImageFormat(ImageFormatGroup.nv21, raw: 17),
+    width: frameWidth,
+    height: frameHeight,
+    planes: [CameraImagePlane(bytes: bytes, bytesPerRow: frameWidth, bytesPerPixel: 1, width: frameWidth, height: frameHeight)],
+  );
+}
+
 YuvImage yuvFrame(int shade) {
   final frame = YuvImage.bgra(frameWidth, frameHeight);
   frame.yPlane.assignFrom(

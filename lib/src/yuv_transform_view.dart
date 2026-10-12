@@ -7,6 +7,10 @@ import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
 /// Camera preview whose accepted frames are synchronously transformed first.
 class YuvTransformView extends StatefulWidget {
   /// Creates a preview for [cameraController], which must be initialized, drawing the result of [transform].
+  ///
+  /// On native platforms the controller's `imageFormatGroup` must be the plugin default, `ImageFormatGroup.yuv420` or
+  /// `ImageFormatGroup.bgra8888`; another group stops the stream with an [UnsupportedError] on the first frame, and the
+  /// view shows the error.
   const YuvTransformView({
     super.key,
     required this.cameraController,

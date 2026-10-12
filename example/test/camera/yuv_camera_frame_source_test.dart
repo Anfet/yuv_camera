@@ -46,6 +46,20 @@ void main() {
     source.dispose();
   });
 
+  test('an unsupported image format group stops the source with one error', () async {
+    final frames = <YuvCameraFrame>[];
+    final errors = <Object>[];
+    final source = YuvCameraFrameSource(controller, onFrame: frames.add, onError: errors.add);
+    await source.start();
+    platform.emit(controller.cameraId, nv21Frame());
+    platform.emit(controller.cameraId, nv21Frame());
+    await Future<void>.delayed(Duration.zero);
+    expect(frames, isEmpty);
+    expect(errors.single, isUnsupportedError);
+    expect(platform.isStreaming(controller.cameraId), isFalse);
+    source.dispose();
+  });
+
   test('Windows front-camera frames are mirrored and not rotated', () async {
     final frames = <YuvCameraFrame>[];
     final source = YuvCameraFrameSource(controller, onFrame: frames.add, onError: (_) {});

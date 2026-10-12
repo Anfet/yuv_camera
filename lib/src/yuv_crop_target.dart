@@ -31,8 +31,8 @@ sealed class YuvCropTarget {
   ///
   /// The returned rectangle has integer edges and lies inside `Offset.zero & imageSize` (the size is rounded to whole
   /// pixels first). Throws an [ArgumentError] when the image or the target is invalid: an image side under one
-  /// pixel, a non-positive [YuvCropTarget.pixels] size, a [YuvCropTarget.square] side outside `(0, 1]`, fraction edges
-  /// that are not ordered inside `[0, 1]`, or a box that rounds to under one pixel.
+  /// pixel, a non-positive [YuvCropTarget.pixels] size, a [YuvCropTarget.square] side outside `(0, 1]`, a non-finite
+  /// alignment or offset, fraction edges that are not ordered inside `[0, 1]`, or a box that rounds to under one pixel.
   Rect place(Size imageSize) {
     if (!imageSize.width.isFinite || !imageSize.height.isFinite) {
       throw ArgumentError.value(imageSize, 'imageSize', 'must be finite');
@@ -48,6 +48,12 @@ sealed class YuvCropTarget {
   Rect _place(int width, int height);
 
   static Rect _placeBox(int imageWidth, int imageHeight, int width, int height, Alignment alignment, Offset offset) {
+    if (!alignment.x.isFinite || !alignment.y.isFinite) {
+      throw ArgumentError.value(alignment, 'alignment', 'must be finite');
+    }
+    if (!offset.isFinite) {
+      throw ArgumentError.value(offset, 'offset', 'must be finite');
+    }
     if (width > imageWidth || height > imageHeight) {
       // Scaling by the limiting side exactly: a floating-point ratio could floor one pixel short of the image side.
       if (imageWidth * height <= imageHeight * width) {

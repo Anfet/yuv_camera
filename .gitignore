@@ -14,6 +14,8 @@
 /example/pubspec_overrides.yaml
 **/doc/api/
 
+.memory/
+
 # IDEs
 .idea/
 *.iml

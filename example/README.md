@@ -6,8 +6,7 @@ and gives it back when you leave:
 - Shape crop: capture a frame, pick a shape, place it, and see exactly which pixels were cut out.
 - Open & close: open, close and reopen the camera fast through the orchestrator. Nothing should fail.
 - Face detection: live ML Kit face box over the preview, with a plain Face detected or No face label.
-- Device check: the guided check of preview, capture and frame rate on this device; it runs the release validation flow
-  recorded with the `DEVICE-1` report.
+- Device check: the guided, step-by-step check of preview, capture and frame rate on this device.
 
 The minimal usage is the Quick start in the [package README](../README.md); this app is the larger scenario with
 shape crop, ML Kit, and device checks.
@@ -29,7 +28,7 @@ ML Kit face detection runs only on Android and iOS; other platforms skip it. For
 ## Verified
 
 The checks are run from the repository root with the scripts in `tool/ci/` (see "Platforms and limits" in the package
-README); there is no hosted CI. The recorded runs of `tool/ci/vm.ps1` passed 78 example tests. The `tool/ci/windows.ps1` script (release build) passed the
+README); there is no hosted CI. The recorded runs of `tool/ci/vm.ps1` passed 82 example tests. The `tool/ci/windows.ps1` script (release build) passed the
 native capture, shape-crop and orchestrator-cycles targets on Windows. The `tool/ci/web.ps1` script passed the Web camera
 source smoke, shape-crop and orchestrator-cycles targets in Chrome JavaScript with a fake device. The
 `tool/ci/android.ps1` script passed the native capture, orchestrator-cycles and shape-crop targets on a physical Pixel 3

@@ -46,8 +46,13 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
 
   void _deliver(CameraImage image, int generation) {
     if (_disposed || generation != _generation) return;
+    final group = image.format.group;
+    if (group != ImageFormatGroup.yuv420 && group != ImageFormatGroup.bgra8888) {
+      _fail(UnsupportedError('Unsupported camera image format: $group. Use ImageFormatGroup.yuv420 or ImageFormatGroup.bgra8888.'), generation);
+      return;
+    }
     final platform = _platform();
-    final format = image.format.group == ImageFormatGroup.bgra8888 ? YuvPixelFormat.bgra8888 : YuvPixelFormat.i420;
+    final format = group == ImageFormatGroup.bgra8888 ? YuvPixelFormat.bgra8888 : YuvPixelFormat.i420;
     final orientation = cameraFrameOrientation(
       platform: platform,
       lensDirection: controller.description.lensDirection,
