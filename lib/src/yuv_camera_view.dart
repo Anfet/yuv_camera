@@ -88,11 +88,24 @@ class _YuvCameraViewState extends State<YuvCameraView> {
       oldWidget.viewController?.detach(_requestCapture);
       widget.viewController?.attach(_requestCapture);
     }
-    if (oldWidget.cameraController != widget.cameraController) {
+    final cameraReplaced = oldWidget.cameraController != widget.cameraController;
+    if (cameraReplaced) {
       _stop();
       _error = null;
       _start();
+    } else if (oldWidget.viewController != widget.viewController) {
+      _publishGeometryAfterBuild();
     }
+  }
+
+  /// Gives a replacement handle the geometry already known; listeners must not be notified during build.
+  void _publishGeometryAfterBuild() {
+    final viewController = widget.viewController;
+    if (viewController == null) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final geometry = _geometry;
+      if (mounted && geometry != null && widget.viewController == viewController) viewController.setGeometry(geometry);
+    });
   }
 
   void _start() {
@@ -162,6 +175,7 @@ class _YuvCameraViewState extends State<YuvCameraView> {
   }
 
   Future<YuvImage?> _requestCapture() {
+    if (_error != null) return Future<YuvImage?>.value(null);
     final pending = _capture;
     if (pending != null && !pending.isCompleted) return pending.future;
     final next = _capture = Completer<YuvImage?>();
