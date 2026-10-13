@@ -12,13 +12,21 @@ void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
   testWidgets('the camera opens and closes in cycles, with and without a preview', (tester) async {
+    await tester.pumpWidget(const SizedBox());
     await YuvFfi.initialize();
     final orchestrator = YuvCameraOrchestrator(closeDelay: Duration.zero, lensDirection: CameraLensDirection.front);
     addTearDown(orchestrator.dispose);
 
     // (1) Ten bare leases: each one opens a camera, and releasing it closes the camera again.
     for (int cycle = 1; cycle <= 10; cycle++) {
-      final lease = await orchestrator.acquire();
+      final acquiring = orchestrator.acquire();
+      await _waitFor(
+        tester,
+        () => orchestrator.state == YuvCameraState.open || orchestrator.error != null,
+        const Duration(seconds: 30),
+        'cycle $cycle: the camera to open',
+      );
+      final lease = await acquiring;
       expect(orchestrator.state, YuvCameraState.open, reason: 'cycle $cycle: state after acquire');
       expect(lease.controller.value.isInitialized, isTrue, reason: 'cycle $cycle: controller after acquire');
       lease.release();
