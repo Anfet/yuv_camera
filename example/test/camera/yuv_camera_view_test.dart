@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:camera/camera.dart';
 import 'package:camera_platform_interface/camera_platform_interface.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -112,6 +113,188 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     expect(await capture, isNull);
     controller.dispose();
+  });
+
+  testWidgets('capture uses the first drawn frame after camera replacement changes resolution', (tester) async {
+    final viewController = YuvCameraViewController();
+    await pumpView(tester, controller: viewController);
+    final replacement = CameraController(
+      const CameraDescription(name: 'replacement', lensDirection: CameraLensDirection.back, sensorOrientation: 0),
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
+    await replacement.initialize();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: YuvCameraView(cameraController: replacement, viewController: viewController, fit: YuvFrameFit.contain),
+      ),
+    );
+    await settleCamera(tester);
+
+    final capture = viewController.capture();
+    var captureDone = false;
+    final captured = capture.then((image) {
+      captureDone = true;
+      return image;
+    });
+    platform.emit(replacement.cameraId, cameraFrame(31, width: 10, height: 8));
+    await pumpUntil(tester, () => captureDone, reason: 'capture of the replacement resolution');
+    final image = await captured;
+    expect(image?.size, const Size(10, 8));
+    expect(image == null ? null : shadeOfYuv(image), 31);
+    expect(viewController.geometry.value?.sourceSize, const Size(10, 8));
+
+    await tester.pumpWidget(const SizedBox());
+    viewController.dispose();
+    await replacement.dispose();
+  });
+
+  testWidgets('capture uses changed Android orientation with unchanged raw dimensions', (tester) async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final viewController = YuvCameraViewController();
+    await pumpView(tester, controller: viewController);
+    platform.emit(camera.cameraId, cameraFrame(21));
+    await pumpUntil(tester, () => viewController.geometry.value != null, reason: 'initial geometry');
+
+    final replacement = CameraController(
+      const CameraDescription(name: 'rotated', lensDirection: CameraLensDirection.back, sensorOrientation: 90),
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
+    await replacement.initialize();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: YuvCameraView(cameraController: replacement, viewController: viewController, fit: YuvFrameFit.contain),
+      ),
+    );
+    await settleCamera(tester);
+    final capture = viewController.capture();
+    var captureDone = false;
+    final captured = capture.then((image) {
+      captureDone = true;
+      return image;
+    });
+    platform.emit(replacement.cameraId, cameraFrame(32));
+    await pumpUntil(tester, () => captureDone, reason: 'capture of the rotated frame');
+    final image = await captured;
+
+    expect(image?.size, const Size(6, 8));
+    expect(viewController.geometry.value?.orientation.rotation, YuvImageRotation.rotation90);
+    expect(image == null ? null : shadeOfYuv(image), 32);
+
+    debugDefaultTargetPlatformOverride = null;
+    await tester.pumpWidget(const SizedBox());
+    viewController.dispose();
+    await replacement.dispose();
+  });
+
+  testWidgets('capture applies the geometry painted with the frame after viewport and fit change', (tester) async {
+    final viewController = YuvCameraViewController();
+    var width = 200.0;
+    var height = 200.0;
+    var fit = YuvFrameFit.contain;
+    var alignment = Alignment.center;
+    late StateSetter updateLayout;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateLayout = setState;
+            return Center(
+              child: SizedBox(
+                width: width,
+                height: height,
+                child: YuvCameraView(cameraController: camera, viewController: viewController, fit: fit, alignment: alignment),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await settleCamera(tester);
+    final capture = viewController.capture();
+    updateLayout(() {
+      width = 300;
+      height = 100;
+      fit = YuvFrameFit.cover;
+      alignment = Alignment.topLeft;
+    });
+    platform.emit(camera.cameraId, cameraFrame(44));
+    var captureDone = false;
+    final captured = capture.then((image) {
+      captureDone = true;
+      return image;
+    });
+    await pumpUntil(tester, () => captureDone, reason: 'capture after viewport and fit change');
+    final image = await captured;
+    final paintedGeometry = viewController.geometry.value;
+    expect(paintedGeometry?.viewSize, const Size(300, 100));
+    expect(paintedGeometry?.fit, YuvFrameFit.cover);
+    expect(image?.toBgraBytes(), paintedGeometry?.apply(yuvFrame(44)).toBgraBytes());
+
+    await tester.pumpWidget(const SizedBox());
+    viewController.dispose();
+  });
+
+  testWidgets('capture completes for a new frame when geometry is unchanged', (tester) async {
+    final viewController = YuvCameraViewController();
+    var geometryNotifications = 0;
+    viewController.geometry.addListener(() => geometryNotifications++);
+    await pumpView(tester, controller: viewController);
+    platform.emit(camera.cameraId, cameraFrame(51));
+    await pumpUntil(tester, () => viewController.geometry.value != null, reason: 'initial geometry');
+    final notificationsAfterFirstFrame = geometryNotifications;
+
+    final capture = viewController.capture();
+    var captureDone = false;
+    final captured = capture.then((image) {
+      captureDone = true;
+      return image;
+    });
+    platform.emit(camera.cameraId, cameraFrame(52));
+    await pumpUntil(tester, () => captureDone, reason: 'capture with unchanged geometry');
+    final image = await captured;
+    expect(image, isNotNull);
+    expect(shadeOfYuv(image!), 52);
+    expect(geometryNotifications, notificationsAfterFirstFrame);
+
+    await tester.pumpWidget(const SizedBox());
+    viewController.dispose();
+  });
+
+  testWidgets('stream error between paint and deferred capture completion completes null once', (tester) async {
+    platform.synchronousStreams = true;
+    final viewController = YuvCameraViewController();
+    var reported = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: YuvCameraView(
+          cameraController: camera,
+          viewController: viewController,
+          onFramePresented: (_) {
+            if (reported) return;
+            reported = true;
+            platform.emitError(camera.cameraId, StateError('stopped after paint'));
+          },
+        ),
+      ),
+    );
+    await settleCamera(tester);
+    final capture = viewController.capture();
+    platform.emit(camera.cameraId, cameraFrame(61));
+    var captureDone = false;
+    final captured = capture.then((image) {
+      captureDone = true;
+      return image;
+    });
+    await pumpUntil(tester, () => captureDone, reason: 'capture cancelled by an error after paint');
+    expect(await captured, isNull);
+    await tester.pump();
+    expect(find.textContaining('Camera error:'), findsOneWidget);
+    expect(await viewController.capture(), isNull);
+
+    await tester.pumpWidget(const SizedBox());
+    viewController.dispose();
   });
 
   testWidgets('capture requested after the stream stopped on an error completes null and a new controller captures again', (tester) async {

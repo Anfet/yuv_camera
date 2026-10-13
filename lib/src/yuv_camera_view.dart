@@ -70,6 +70,7 @@ class _YuvCameraViewState extends State<YuvCameraView> {
   YuvCameraFrame? _presentedCandidate;
   YuvFrameGeometry? _geometry;
   Completer<YuvImage?>? _capture;
+  int _sourceGeneration = 0;
   Duration? _lastOnFrame;
   bool _onFrameRunning = false;
   Object? _error;
@@ -146,32 +147,43 @@ class _YuvCameraViewState extends State<YuvCameraView> {
   void _onGeometry(YuvFrameGeometry geometry) {
     _geometry = geometry;
     widget.viewController?.setGeometry(geometry);
-    _completeCaptureForPresentedFrame();
     if (mounted) setState(() {});
   }
 
   void _onPresented() {
-    _completeCaptureForPresentedFrame();
-    widget.onFramePresented?.call(_presenter.hasShader);
-  }
-
-  void _completeCaptureForPresentedFrame() {
     final capture = _capture;
     final frame = _presentedCandidate;
-    final geometry = _geometry;
-    if (capture != null && !capture.isCompleted && frame != null && geometry != null) {
-      try {
-        final fullSource = Rect.fromLTWH(0, 0, frame.width.toDouble(), frame.height.toDouble());
-        capture.complete(
-          geometry.visibleSourceRect == fullSource && frame.orientation == YuvFrameOrientation.upright
-              ? frame.image.copy()
-              : geometry.apply(frame.image),
-        );
-      } catch (error, stack) {
-        capture.completeError(error, stack);
-      }
-      _capture = null;
+    final source = _source;
+    if (capture != null && frame != null && source != null) {
+      final generation = _sourceGeneration;
+      scheduleMicrotask(() {
+        if (!mounted ||
+            generation != _sourceGeneration ||
+            !identical(_source, source) ||
+            !identical(_capture, capture) ||
+            !identical(_presentedCandidate, frame)) {
+          return;
+        }
+        final geometry = _geometry;
+        if (geometry == null ||
+            geometry.sourceSize != Size(frame.width.toDouble(), frame.height.toDouble()) ||
+            geometry.orientation != frame.orientation) {
+          return;
+        }
+        _capture = null;
+        try {
+          final fullSource = Rect.fromLTWH(0, 0, frame.width.toDouble(), frame.height.toDouble());
+          capture.complete(
+            geometry.visibleSourceRect == fullSource && frame.orientation == YuvFrameOrientation.upright
+                ? frame.image.copy()
+                : geometry.apply(frame.image),
+          );
+        } catch (error, stack) {
+          capture.completeError(error, stack);
+        }
+      });
     }
+    widget.onFramePresented?.call(_presenter.hasShader);
   }
 
   Future<YuvImage?> _requestCapture() {
@@ -195,6 +207,7 @@ class _YuvCameraViewState extends State<YuvCameraView> {
   }
 
   void _stop() {
+    _sourceGeneration++;
     _source?.dispose();
     _source = null;
     _presenter.reset();

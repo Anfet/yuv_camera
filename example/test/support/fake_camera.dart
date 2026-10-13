@@ -13,20 +13,20 @@ const int frameHeight = 6;
 /// A grey BGRA frame the way camera_desktop delivers it: one plane, every
 /// channel equal to [shade], so the decoded pixels tell which frame is shown.
 /// [rowPadding] extra bytes per row model a native stride above `width * 4`.
-CameraImageData cameraFrame(int shade, {int rowPadding = 0}) {
-  final bytesPerRow = frameWidth * 4 + rowPadding;
-  final bytes = Uint8List(bytesPerRow * frameHeight);
-  for (int row = 0; row < frameHeight; row++) {
-    for (int col = 0; col < frameWidth; col++) {
+CameraImageData cameraFrame(int shade, {int width = frameWidth, int height = frameHeight, int rowPadding = 0}) {
+  final bytesPerRow = width * 4 + rowPadding;
+  final bytes = Uint8List(bytesPerRow * height);
+  for (int row = 0; row < height; row++) {
+    for (int col = 0; col < width; col++) {
       final offset = row * bytesPerRow + col * 4;
       bytes.setRange(offset, offset + 4, [shade, shade, shade, 255]);
     }
   }
   return CameraImageData(
     format: const CameraImageFormat(ImageFormatGroup.bgra8888, raw: 'BGRA'),
-    width: frameWidth,
-    height: frameHeight,
-    planes: [CameraImagePlane(bytes: bytes, bytesPerRow: bytesPerRow, bytesPerPixel: 4, width: frameWidth, height: frameHeight)],
+    width: width,
+    height: height,
+    planes: [CameraImagePlane(bytes: bytes, bytesPerRow: bytesPerRow, bytesPerPixel: 4, width: width, height: height)],
   );
 }
 
@@ -91,6 +91,9 @@ class FakeCameraPlatform extends CameraPlatform {
   /// When set, `dispose` waits for it.
   Completer<void>? disposeGate;
 
+  /// Delivers frames and errors synchronously, for ordering-sensitive widget regressions.
+  bool synchronousStreams = false;
+
   /// When set, the next `initializeCamera` call throws it.
   CameraException? failNextInitialize;
 
@@ -152,6 +155,7 @@ class FakeCameraPlatform extends CameraPlatform {
 
     late final StreamController<CameraImageData> controller;
     controller = StreamController<CameraImageData>(
+      sync: synchronousStreams,
       onListen: () {
         listens.add(cameraId);
         events.add('listen:$cameraId');
