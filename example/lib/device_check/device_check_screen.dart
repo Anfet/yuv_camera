@@ -6,6 +6,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
 import 'package:yuv_camera_example/camera/heavy_blur.dart';
 import 'package:yuv_camera/yuv_camera.dart';
@@ -248,15 +249,16 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
                 decoration: const InputDecoration(labelText: 'Notes'),
                 onChanged: (_) => setState(() {}),
               ),
-              FilledButton(
-                onPressed: () => Clipboard.setData(ClipboardData(text: _report.json)),
-                child: const Text('Copy'),
-              ),
+              FilledButton.icon(onPressed: _shareReport, icon: const Icon(Icons.share), label: const Text('Share')),
             ],
           ),
         ),
       ),
     );
+  }
+
+  Future<void> _shareReport() async {
+    await SharePlus.instance.share(ShareParams(text: _report.json, title: 'Device check result'));
   }
 
   Future<void> _initializeCamera() async {

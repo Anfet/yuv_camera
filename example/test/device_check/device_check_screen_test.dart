@@ -12,13 +12,14 @@ import 'package:yuv_camera_example/device_check/device_check_screen.dart';
 import '../support/fake_camera.dart';
 
 void main() {
-  testWidgets('skip completes every step and copies the final JSON', (tester) async {
-    String? copied;
-    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, (call) async {
-      if (call.method == 'Clipboard.setData') copied = (call.arguments as Map<Object?, Object?>)['text'] as String?;
+  testWidgets('skip completes every step and shares the final JSON', (tester) async {
+    Map<Object?, Object?>? shared;
+    const shareChannel = MethodChannel('dev.fluttercommunity.plus/share');
+    TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(shareChannel, (call) async {
+      if (call.method == 'share') shared = call.arguments as Map<Object?, Object?>;
       return null;
     });
-    addTearDown(() => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
+    addTearDown(() => TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger.setMockMethodCallHandler(shareChannel, null));
     await tester.pumpWidget(const MaterialApp(home: DeviceCheckScreen(cameraEnabled: false)));
 
     expect(find.text('Start'), findsOneWidget);
@@ -33,9 +34,12 @@ void main() {
     }
 
     expect(find.text('Device check result'), findsOneWidget);
-    await tester.tap(find.text('Copy'));
+    final json = tester.widget<SelectableText>(find.byType(SelectableText)).data;
+    await tester.tap(find.text('Share'));
     await tester.pump();
-    expect(copied, contains('"card": "DEVICE-1"'));
+    expect(shared?['text'], json);
+    expect(shared?['title'], 'Device check result');
+    expect(find.text('Copy'), findsNothing);
   });
 
   testWidgets('a question step records the selected answer', (tester) async {
