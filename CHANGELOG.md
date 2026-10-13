@@ -18,7 +18,7 @@
 * Shape crop: `YuvCropTarget` (`pixels`, `fraction`, `square`), `YuvCropShape` (`rectangle`, `ellipse`), `YuvShapedImage`
   and `YuvImage.croppedToShape`; points outside the shape are painted with a fill color and are transparent in
   `toBgraBytes()`.
-* Android, iOS, desktop (through `camera_desktop` registered by the application) and Web frame sources over the
+* Android, iOS, desktop (through the application's `camera_desktop` dependency, registered by Flutter) and Web frame sources over the
   `camera` plugin; ML Kit is not a dependency and is connected through `onFrame`.
 * Frame orientation: on Android frames are rotated by the sensor and device orientation and the front camera is mirrored;
   on Windows and Web frames are not rotated and every camera except a back one is mirrored, as the `camera_desktop` and
@@ -35,5 +35,6 @@
   ownership rules for frames and captures, and the verified-platform limits. `capture()` may return `null`; Safari,
   Firefox, `--wasm` builds and other devices are not claimed.
 * Step-by-step guides in the [GitHub Wiki](https://github.com/Anfet/yuv_camera/wiki).
-* Migration from the `yuv_ffi` 0.5.1 example: depend on `yuv_camera` instead of copying its camera code, and register
-  `camera_desktop` in the application on desktop.
+* Migration from the `yuv_ffi` 0.5.1 example: depend on `yuv_camera` instead of copying its camera code, and add
+  `camera_desktop` beside `camera` on desktop. Flutter registers the federated plugin when the app is rebuilt.
+  See [MIGRATION.md](MIGRATION.md) for imports, controller ownership, frame formats and ML Kit.

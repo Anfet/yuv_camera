@@ -255,6 +255,7 @@ Safari and Firefox), `--wasm` builds, and devices are not claimed.
 - [API reference](https://pub.dev/documentation/yuv_camera/latest/) for every
   public class and parameter.
 - [CHANGELOG.md](CHANGELOG.md).
+- [MIGRATION.md](MIGRATION.md) for applications that copied camera code from the `yuv_ffi` example.
 - [`yuv_ffi`](https://github.com/Anfet/yuv_ffi) for images, operations, and
   geometry.
 
