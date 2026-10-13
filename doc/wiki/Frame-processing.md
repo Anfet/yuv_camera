@@ -217,7 +217,7 @@ so it offers no `capture()`; use `YuvCameraView` when you need capture.
 ## Use an external detector (ML Kit)
 
 ML Kit is not a dependency of `yuv_camera`. You connect a detector yourself through `onFrame`, as the
-[example app](https://github.com/Anfet/yuv_camera/blob/main/example/lib/camera_screen.dart) does. The steps:
+[example app](https://github.com/Anfet/yuv_camera/blob/main/example/lib/faces/face_screen.dart) does. The steps:
 
 1. Add the detector to your app (this recipe uses `google_mlkit_face_detection`).
 2. In `onFrame`, give the detector the raw `frame.image` and the rotation from `frame.orientation.rotation`. Mirroring is

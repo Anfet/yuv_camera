@@ -56,9 +56,10 @@ against exact commits. So far they have confirmed:
 
 | Check | Result |
 | --- | --- |
-| The example's tests | 37 passed: 26 camera, 5 device-check, 4 for the ML Kit input conversion and 2 for the example navigation. |
-| Native capture integration target | Passed on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build). |
-| Web camera source smoke | Passed in Chrome (JavaScript build) with a fake media stream. |
+| The example's tests | 108 passed: 86 camera, 7 device-check, 5 example navigation, 4 for the ML Kit input conversion, 3 for the shape-crop screen, 2 for the orchestrator screen and 1 for the face screen. |
+| Native capture integration target | Passed on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build with the fake camera platform). |
+| Shape-crop and orchestrator-cycles integration targets | Passed on Windows, in Chrome (JavaScript build, with a fake media stream) and on a physical Pixel 3 (Android 12, `arm64-v8a`). |
+| Web camera source smoke and device-choice target | Passed in Chrome (JavaScript build), including two distinct fake video inputs. |
 | iOS observation | The behavior documented on `YuvCameraFrame`: one iPhone, iOS 18.7, front camera, portrait and landscape. |
 
 A build, a passing emulator or a fake-stream target does not prove that a physical camera works on that platform. Other

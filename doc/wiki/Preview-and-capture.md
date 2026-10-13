@@ -17,6 +17,9 @@ started page.
 | `YuvCameraViewController` | You, and you pass it to the view | You: call `dispose()` when your widget is disposed. |
 | The `YuvImage` returned by `capture()` | `yuv_camera`, as a new image | It is yours: nothing else holds it. |
 
+When several screens share one camera, the owner of the controller is a `YuvCameraOrchestrator` instead of you; see
+[Sharing the camera](https://github.com/Anfet/yuv_camera/wiki/Sharing-the-camera).
+
 `YuvCameraView` requires an initialized controller. With an uninitialized one its frame source reports
 `CameraController should be initialized`, and the view shows `Camera error:` followed by that error. Opening the
 camera can fail: `availableCameras()` may return an empty list, and `initialize()` throws when the user denies the
