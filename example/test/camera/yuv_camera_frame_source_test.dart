@@ -119,9 +119,11 @@ void main() {
     source.dispose();
   });
 
-  test('stopping or disposing invalidates starts queued behind stream cancellation', () async {
-    for (final disposeLastConsumer in [false, true]) {
-      final source = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: (_) {});
+  for (final disposeLastConsumer in [false, true]) {
+    test('${disposeLastConsumer ? 'disposing' : 'stopping'} invalidates starts queued behind stream cancellation', () async {
+      final frames = <YuvCameraFrame>[];
+      final errors = <Object>[];
+      final source = YuvCameraFrameSource(controller, onFrame: frames.add, onError: errors.add);
       await source.start();
       final priorListens = [...platform.listens];
       final stopGate = platform.stopGate = Completer<void>();
@@ -140,12 +142,17 @@ void main() {
       stopGate.complete();
       await Future.wait([openingA, openingB]);
       await Future<void>.delayed(Duration.zero);
+      platform.emit(controller.cameraId, cameraFrame(44));
+      platform.emitError(controller.cameraId, StateError('delivery after final cancellation'));
+      await Future<void>.delayed(Duration.zero);
       expect(platform.listens, priorListens, reason: 'queued starts must not reopen after the final stop');
       expect(platform.isStreaming(controller.cameraId), isFalse);
       expect(platform.overlappingStarts, isEmpty);
+      expect(frames, isEmpty, reason: 'no frame may be delivered after the final stop or dispose');
+      expect(errors, isEmpty, reason: 'no stream error may be delivered after the final stop or dispose');
       if (!disposeLastConsumer) source.dispose();
-    }
-  });
+    });
+  }
 
   test('a frame fan-out skips a consumer restarted by an earlier callback', () async {
     final firstFrames = <int>[];
