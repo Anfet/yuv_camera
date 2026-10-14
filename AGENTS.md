@@ -1,6 +1,6 @@
 # AGENTS — yuv_camera
 
-Package rules layered on `D:\.projects\AGENTS.md`, `D:\.projects\yuv\AGENTS.md`, `D:\.projects\ENGINEERING_PROTOCOL.md`, and `D:\.projects\.protocol\<role>.md`. Shared plan and statuses are in `D:\.projects\yuv\todo.md`. Shared memory: `D:\.projects\yuv\.memory\MEMORY.md`.
+Package rules layered on `D:\.projects\AGENTS.md`, `D:\.projects\yuv\AGENTS.md`, `D:\.projects\.tools\skills\engineering-protocol\SKILL.md` and its selected role reference. Shared plan and statuses are in `D:\.projects\yuv\todo.md`. Shared memory: `D:\.projects\yuv\.memory\MEMORY.md`.
 
 ## Package boundaries
 
@@ -14,7 +14,7 @@ Package rules layered on `D:\.projects\AGENTS.md`, `D:\.projects\yuv\AGENTS.md`,
 ## Checks and workflow
 
 - Probe, validation, and test requirements come from each active card and this package's scripts. Do not call `flutter drive` directly; use the checked-in `drive.ps1` / `drive.sh` wrapper and require exit 0 plus `All tests passed`.
-- No CI (D-38): the package has no GitHub Actions workflows; do not add any. Every check runs directly on the own machines (`D:\.projects\MACHINES.md`). `tool/ci/` keeps its name as the scripts directory.
+- No CI (D-38): the package has no GitHub Actions workflows; do not add any. Every check runs directly on the own machines (`D:\.projects\.tools\private-skills\machine-use\SKILL.md`). `tool/ci/` keeps its name as the scripts directory.
 - Keys for changed paths: `bash tool/ci/scope_guard.sh <base>` (`path_keys()` is the source of truth). Commands, run from the package root:
 
   | Key | Command | Machine |
