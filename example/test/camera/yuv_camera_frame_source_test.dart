@@ -119,6 +119,161 @@ void main() {
     source.dispose();
   });
 
+  test('stopping or disposing invalidates starts queued behind stream cancellation', () async {
+    for (final disposeLastConsumer in [false, true]) {
+      final source = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: (_) {});
+      await source.start();
+      final priorListens = [...platform.listens];
+      final stopGate = platform.stopGate = Completer<void>();
+      source.stop();
+      await Future<void>.delayed(Duration.zero);
+
+      final openingA = source.start();
+      source.stop();
+      final openingB = source.start();
+      if (disposeLastConsumer) {
+        source.dispose();
+      } else {
+        source.stop();
+      }
+
+      stopGate.complete();
+      await Future.wait([openingA, openingB]);
+      await Future<void>.delayed(Duration.zero);
+      expect(platform.listens, priorListens, reason: 'queued starts must not reopen after the final stop');
+      expect(platform.isStreaming(controller.cameraId), isFalse);
+      expect(platform.overlappingStarts, isEmpty);
+      if (!disposeLastConsumer) source.dispose();
+    }
+  });
+
+  test('a frame fan-out skips a consumer restarted by an earlier callback', () async {
+    final firstFrames = <int>[];
+    final secondFrames = <int>[];
+    late YuvCameraFrameSource second;
+    var restartSecond = true;
+    final first = YuvCameraFrameSource(
+      controller,
+      onFrame: (frame) {
+        firstFrames.add(frame.image.toBgraBytes()[0]);
+        if (restartSecond) {
+          restartSecond = false;
+          second.start();
+        }
+      },
+      onError: (_) {},
+    );
+    second = YuvCameraFrameSource(controller, onFrame: (frame) => secondFrames.add(frame.image.toBgraBytes()[0]), onError: (_) {});
+    await Future.wait([first.start(), second.start()]);
+
+    platform.emit(controller.cameraId, cameraFrame(31));
+    await Future<void>.delayed(Duration.zero);
+    expect(firstFrames, [31]);
+    expect(secondFrames, isEmpty, reason: 'the restarted delivery must not receive its predecessor frame');
+
+    platform.emit(controller.cameraId, cameraFrame(32));
+    await Future<void>.delayed(Duration.zero);
+    expect(secondFrames, [32]);
+    first.dispose();
+    second.dispose();
+  });
+
+  test('terminal fan-out skips stale recipients restarted or created by an error callback', () async {
+    final firstErrors = <Object>[];
+    final secondErrors = <Object>[];
+    final newErrors = <Object>[];
+    final secondFrames = <int>[];
+    late YuvCameraFrameSource second;
+    late YuvCameraFrameSource added;
+    var recoveryStarted = false;
+    final first = YuvCameraFrameSource(
+      controller,
+      onFrame: (_) {},
+      onError: (error) {
+        firstErrors.add(error);
+        if (recoveryStarted) return;
+        recoveryStarted = true;
+        second.start();
+        added.start();
+      },
+    );
+    second = YuvCameraFrameSource(controller, onFrame: (frame) => secondFrames.add(frame.image.toBgraBytes()[0]), onError: secondErrors.add);
+    added = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: newErrors.add);
+    await Future.wait([first.start(), second.start()]);
+
+    platform.emitError(controller.cameraId, StateError('terminal'));
+    await Future<void>.delayed(Duration.zero);
+    expect(firstErrors, hasLength(1));
+    expect(secondErrors, isEmpty, reason: 'the restarted consumer must not receive the old terminal error');
+    expect(newErrors, isEmpty, reason: 'a newly created delivery was absent from the terminal snapshot');
+    expect(platform.listens, [controller.cameraId, controller.cameraId]);
+
+    platform.emit(controller.cameraId, cameraFrame(33));
+    await Future<void>.delayed(Duration.zero);
+    expect(secondFrames, [33]);
+    expect(secondErrors, isEmpty);
+    first.dispose();
+    second.dispose();
+    added.dispose();
+  });
+
+  test('terminal errors skip disposed consumers and intentional stops remain quiet', () async {
+    final firstErrors = <Object>[];
+    final secondErrors = <Object>[];
+    final first = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: firstErrors.add);
+    final second = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: secondErrors.add);
+    await Future.wait([first.start(), second.start()]);
+    first.stop();
+    second.dispose();
+    expect(firstErrors, isEmpty);
+    expect(secondErrors, isEmpty);
+
+    await first.start();
+    await first.start();
+    platform.emitError(controller.cameraId, StateError('terminal once'));
+    await Future<void>.delayed(Duration.zero);
+    expect(firstErrors, hasLength(1));
+    expect(secondErrors, isEmpty);
+    first.dispose();
+  });
+
+  test('terminal errors reach both active consumers exactly once', () async {
+    final firstErrors = <Object>[];
+    final secondErrors = <Object>[];
+    final first = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: firstErrors.add);
+    final second = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: secondErrors.add);
+    await Future.wait([first.start(), second.start()]);
+
+    platform.emitError(controller.cameraId, StateError('terminal for all active consumers'));
+    await Future<void>.delayed(Duration.zero);
+    expect(firstErrors, hasLength(1));
+    expect(secondErrors, hasLength(1));
+    first.dispose();
+    second.dispose();
+  });
+
+  test('terminal error skips a recipient disposed by an earlier error callback', () async {
+    final firstErrors = <Object>[];
+    final secondErrors = <Object>[];
+    late YuvCameraFrameSource second;
+    final first = YuvCameraFrameSource(
+      controller,
+      onFrame: (_) {},
+      onError: (error) {
+        firstErrors.add(error);
+        second.dispose();
+      },
+    );
+    second = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: secondErrors.add);
+    await Future.wait([first.start(), second.start()]);
+
+    platform.emitError(controller.cameraId, StateError('terminal before dispose callback'));
+    await Future<void>.delayed(Duration.zero);
+    expect(firstErrors, hasLength(1));
+    expect(secondErrors, isEmpty, reason: 'a disposed recipient must not receive a snapshotted terminal error');
+    first.dispose();
+  });
+
   test('a new factory consumer reuses the stopped backend after the last consumer is disposed', () async {
     final first = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: (_) {});
     await first.start();

@@ -154,14 +154,11 @@ class _YuvCameraViewState extends State<YuvCameraView> {
     final capture = _capture;
     final frame = _presentedCandidate;
     final source = _source;
+    widget.onFramePresented?.call(_presenter.hasShader);
     if (capture != null && frame != null && source != null) {
       final generation = _sourceGeneration;
       scheduleMicrotask(() {
-        if (!mounted ||
-            generation != _sourceGeneration ||
-            !identical(_source, source) ||
-            !identical(_capture, capture) ||
-            !identical(_presentedCandidate, frame)) {
+        if (!mounted || generation != _sourceGeneration || !identical(_source, source) || !identical(_capture, capture)) {
           return;
         }
         final geometry = _geometry;
@@ -183,7 +180,6 @@ class _YuvCameraViewState extends State<YuvCameraView> {
         }
       });
     }
-    widget.onFramePresented?.call(_presenter.hasShader);
   }
 
   Future<YuvImage?> _requestCapture() {

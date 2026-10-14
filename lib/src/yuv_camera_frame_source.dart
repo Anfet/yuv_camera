@@ -51,6 +51,7 @@ final class _CameraFrameSourceHub {
   late final impl.YuvCameraFrameSourceImpl _backend;
   Future<void>? _opening;
   bool _terminal = false;
+  int _generation = 0;
 
   YuvCameraFrameSource createConsumer({required void Function(YuvCameraFrame frame) onFrame, required void Function(Object error) onError}) {
     final consumer = _FrameSourceConsumer(this, onFrame, onError);
@@ -64,8 +65,13 @@ final class _CameraFrameSourceHub {
     consumer._begin();
     if (wasIdle || _terminal) {
       _terminal = false;
+      final generation = ++_generation;
       final previousOpening = _opening;
-      final opening = _opening = previousOpening == null ? _backend.start() : previousOpening.then((_) => _backend.start());
+      final opening = _opening = () async {
+        await previousOpening;
+        if (generation != _generation || !_consumers.any((item) => item._running)) return;
+        await _backend.start();
+      }();
       try {
         await opening;
       } finally {
@@ -79,7 +85,10 @@ final class _CameraFrameSourceHub {
   void stop(_FrameSourceConsumer consumer) {
     if (!consumer._running) return;
     consumer._end();
-    if (!_consumers.any((item) => item._running)) _backend.stop();
+    if (!_consumers.any((item) => item._running)) {
+      _generation++;
+      _backend.stop();
+    }
   }
 
   void dispose(_FrameSourceConsumer consumer) {
@@ -89,8 +98,12 @@ final class _CameraFrameSourceHub {
   }
 
   void _deliver(YuvCameraFrame frame) {
-    for (final consumer in _consumers.toList()) {
-      if (!consumer._running) continue;
+    final deliveries = [
+      for (final consumer in _consumers)
+        if (consumer._running) (consumer, consumer._deliveryGeneration),
+    ];
+    for (final (consumer, generation) in deliveries) {
+      if (!consumer._running || consumer._deliveryGeneration != generation) continue;
       try {
         consumer._onFrame(
           YuvCameraFrame(
@@ -113,9 +126,16 @@ final class _CameraFrameSourceHub {
   void _fail(Object error) {
     if (_terminal) return;
     _terminal = true;
-    for (final consumer in _consumers.toList()) {
-      if (!consumer._running) continue;
+    _generation++;
+    final recipients = [
+      for (final consumer in _consumers)
+        if (consumer._running) (consumer, consumer._deliveryGeneration),
+    ];
+    for (final (consumer, _) in recipients) {
       consumer._end();
+    }
+    for (final (consumer, generation) in recipients) {
+      if (consumer._disposed || consumer._deliveryGeneration != generation) continue;
       try {
         consumer._onError(error);
       } catch (callbackError, stack) {
@@ -141,6 +161,7 @@ final class _FrameSourceConsumer implements YuvCameraFrameSource {
   final Stopwatch _clock = Stopwatch();
   bool _running = false;
   bool _disposed = false;
+  int _deliveryGeneration = 0;
 
   @override
   Future<void> start() => _hub.start(this);
@@ -152,6 +173,7 @@ final class _FrameSourceConsumer implements YuvCameraFrameSource {
   void dispose() => _hub.dispose(this);
 
   void _begin() {
+    _deliveryGeneration++;
     _running = true;
     _clock
       ..reset()

@@ -297,6 +297,53 @@ void main() {
     viewController.dispose();
   });
 
+  testWidgets('stopping the view after paint but before deferred completion completes null once', (tester) async {
+    platform.synchronousStreams = true;
+    final viewController = YuvCameraViewController();
+    var unmountQueued = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: YuvCameraView(
+          cameraController: camera,
+          viewController: viewController,
+          onFramePresented: (_) {
+            if (unmountQueued) return;
+            unmountQueued = true;
+            scheduleMicrotask(() {
+              tester.binding.attachRootWidget(
+                View(
+                  view: tester.view,
+                  child: const MaterialApp(home: SizedBox()),
+                ),
+              );
+              tester.binding.drawFrame();
+            });
+          },
+        ),
+      ),
+    );
+    await settleCamera(tester);
+
+    final capture = viewController.capture();
+    var completions = 0;
+    var captureDone = false;
+    final captured = capture.then((image) {
+      completions++;
+      captureDone = true;
+      return image;
+    });
+    platform.emit(camera.cameraId, cameraFrame(62));
+    expect(captureDone, isFalse, reason: 'the capture must still be pending until the frame is painted');
+    await pumpUntil(tester, () => captureDone, reason: 'capture cancellation after paint and view stop');
+    expect(await captured, isNull);
+    await tester.pump();
+    await tester.pump();
+    expect(completions, 1);
+    expect(unmountQueued, isTrue);
+
+    viewController.dispose();
+  });
+
   testWidgets('capture requested after the stream stopped on an error completes null and a new controller captures again', (tester) async {
     final controller = YuvCameraViewController();
     Future<void> pumpCamera(CameraController cameraController) async {
@@ -330,6 +377,44 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     controller.dispose();
     await replacement.dispose();
+  });
+
+  testWidgets('capture keeps the painted frame when the next frame arrives synchronously', (tester) async {
+    platform.synchronousStreams = true;
+    final viewController = YuvCameraViewController();
+    var deliveredNextFrame = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: YuvCameraView(
+          cameraController: camera,
+          viewController: viewController,
+          onFramePresented: (_) {
+            if (deliveredNextFrame) return;
+            deliveredNextFrame = true;
+            platform.emit(camera.cameraId, cameraFrame(72));
+          },
+        ),
+      ),
+    );
+    await settleCamera(tester);
+
+    final capture = viewController.capture();
+    var captureDone = false;
+    final captured = capture.then((image) {
+      captureDone = true;
+      return image;
+    });
+    platform.emit(camera.cameraId, cameraFrame(71));
+    expect(captureDone, isFalse, reason: 'capture must wait until the candidate has been painted');
+
+    await pumpUntil(tester, () => captureDone, reason: 'capture of the frame presented before the synchronous next frame');
+    final image = await captured;
+    expect(image, isNotNull);
+    expect(shadeOfYuv(image!), 71);
+    expect(deliveredNextFrame, isTrue);
+
+    await tester.pumpWidget(const SizedBox());
+    viewController.dispose();
   });
 
   testWidgets('unexpected EOF completes concurrent captures with null while the controller stays initialized', (tester) async {
