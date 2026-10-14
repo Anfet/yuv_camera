@@ -38,7 +38,11 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     try {
       _subscription = CameraPlatform.instance
           .onStreamedFrameAvailable(controller.cameraId)
-          .listen((data) => _deliver(CameraImage.fromPlatformInterface(data), generation), onError: (Object error) => _fail(error, generation));
+          .listen(
+            (data) => _deliver(CameraImage.fromPlatformInterface(data), generation),
+            onError: (Object error) => _fail(error, generation),
+            onDone: () => _fail(StateError('Camera image stream ended unexpectedly'), generation),
+          );
     } catch (error) {
       _fail(error, generation);
     }

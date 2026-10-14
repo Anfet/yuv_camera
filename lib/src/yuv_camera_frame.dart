@@ -32,7 +32,7 @@ class YuvCameraFrame {
   /// How the raw [image] must be rotated and mirrored to appear upright.
   final YuvFrameOrientation orientation;
 
-  /// Time since the frame source started; it restarts with each source start.
+  /// Time since this consumer started receiving frames; it restarts for each consumer start.
   final Duration timestamp;
 
   final YuvImage Function() _load;

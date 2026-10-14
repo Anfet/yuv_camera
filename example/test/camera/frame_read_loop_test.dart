@@ -104,7 +104,7 @@ void main() {
       expect(host.shown, isEmpty);
     });
 
-    test('the current stream reports its errors and ends on done', () async {
+    test('the current stream reports its errors and turns done into one terminal error', () async {
       final erroring = _PreviewHost();
       final erroringReader = _FakeReader();
       erroring.start(erroringReader);
@@ -124,7 +124,22 @@ void main() {
       await pumpEventQueue();
       expect(ending.shown, ['a']);
       expect(endingReader.readCount, 2);
-      expect(ending.lastError, isNull);
+      expect(ending.lastError, isA<StateError>());
+      expect(ending.errorCount, 1);
+    });
+
+    test('done from a stale reader does not report a terminal error', () async {
+      final host = _PreviewHost();
+      final oldReader = _FakeReader();
+      host.start(oldReader);
+      await pumpEventQueue();
+
+      host.stopAndRestart();
+      oldReader.resolveDone();
+      await pumpEventQueue();
+
+      expect(host.lastError, isNull);
+      expect(host.errorCount, 0);
     });
   });
 }
@@ -168,6 +183,7 @@ class _PreviewHost {
   final List<String> transformed = [];
   final List<String> shown = [];
   Object? lastError;
+  int errorCount = 0;
   bool holdCopy = false;
 
   int _generation = 0;
@@ -190,7 +206,10 @@ class _PreviewHost {
         await _process(frame, generation);
       },
       close: (frame) => frame.isClosed = true,
-      onError: (error) => lastError = error,
+      onError: (error) {
+        errorCount++;
+        lastError = error;
+      },
     ).ignore();
   }
 

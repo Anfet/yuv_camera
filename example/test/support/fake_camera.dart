@@ -110,6 +110,10 @@ class FakeCameraPlatform extends CameraPlatform {
 
   void emitError(int cameraId, Object error) => _activeStreams[cameraId]?.addError(error);
 
+  Future<void> endStream(int cameraId) async {
+    await _activeStreams[cameraId]?.close();
+  }
+
   @override
   Future<List<CameraDescription>> availableCameras() async {
     await lookupGate?.future;

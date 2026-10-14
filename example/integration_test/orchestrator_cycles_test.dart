@@ -64,7 +64,76 @@ void main() {
       await _waitFor(tester, () => orchestrator.state == YuvCameraState.closed, const Duration(seconds: 5), 'round $round: the camera to close');
     }
 
-    // (5)
+    // (5) Two previews share one controller and one platform stream; either preview can go away independently.
+    var showFirst = true;
+    var firstPresented = 0;
+    var secondPresented = 0;
+    CameraController? firstController;
+    CameraController? secondController;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) => Row(
+            children: [
+              if (showFirst)
+                Expanded(
+                  child: YuvCameraLeaseBuilder(
+                    orchestrator: orchestrator,
+                    builder: (context, controller) {
+                      firstController = controller;
+                      return YuvCameraView(cameraController: controller, onFramePresented: (_) => firstPresented++);
+                    },
+                  ),
+                ),
+              Expanded(
+                child: YuvCameraLeaseBuilder(
+                  key: const ValueKey('second-preview'),
+                  orchestrator: orchestrator,
+                  builder: (context, controller) {
+                    secondController = controller;
+                    return YuvCameraView(cameraController: controller, onFramePresented: (_) => secondPresented++);
+                  },
+                ),
+              ),
+              TextButton(onPressed: () => setState(() => showFirst = false), child: const Text('Remove first')),
+            ],
+          ),
+        ),
+      ),
+    );
+    await _waitFor(tester, () => firstPresented > 0 && secondPresented > 0, const Duration(seconds: 30), 'both shared previews to present a frame');
+    expect(identical(firstController, secondController), isTrue, reason: 'both previews must lease the same controller');
+    final sharedController = orchestrator.controller;
+    expect(identical(firstController, sharedController), isTrue);
+
+    firstPresented = 0;
+    secondPresented = 0;
+    var watch = Stopwatch()..start();
+    while (watch.elapsed < const Duration(seconds: 3)) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(firstPresented, greaterThan(10), reason: 'the first preview should keep presenting camera frames');
+    expect(secondPresented, greaterThan(10), reason: 'the second preview should keep presenting camera frames');
+
+    await tester.tap(find.text('Remove first'));
+    await tester.pump();
+    expect(identical(orchestrator.controller, sharedController), isTrue, reason: 'removing one lease must keep the same controller');
+    secondPresented = 0;
+    watch = Stopwatch()..start();
+    while (watch.elapsed < const Duration(seconds: 3)) {
+      await tester.pump(const Duration(milliseconds: 16));
+    }
+    expect(secondPresented, greaterThan(10), reason: 'the surviving preview should continue presenting after removal');
+
+    await tester.pumpWidget(const SizedBox());
+    await _waitFor(
+      tester,
+      () => orchestrator.state == YuvCameraState.closed,
+      const Duration(seconds: 5),
+      'the shared camera to close after the last preview',
+    );
+
+    // (6)
     expect(tester.takeException(), isNull);
   }, timeout: const Timeout(Duration(minutes: 3)));
 }

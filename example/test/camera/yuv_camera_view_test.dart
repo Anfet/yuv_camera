@@ -332,6 +332,27 @@ void main() {
     await replacement.dispose();
   });
 
+  testWidgets('unexpected EOF completes concurrent captures with null while the controller stays initialized', (tester) async {
+    final viewController = YuvCameraViewController();
+    await pumpView(tester, controller: viewController);
+    await settleCamera(tester);
+
+    final firstCapture = viewController.capture();
+    final secondCapture = viewController.capture();
+    expect(platform.isStreaming(camera.cameraId), isTrue);
+    await platform.endStream(camera.cameraId);
+    await tester.pump();
+
+    expect(await firstCapture.timeout(const Duration(seconds: 1)), isNull);
+    expect(await secondCapture.timeout(const Duration(seconds: 1)), isNull);
+    expect(camera.value.isInitialized, isTrue);
+    expect(find.textContaining('Camera error:'), findsOneWidget);
+    expect(await viewController.capture().timeout(const Duration(seconds: 1)), isNull);
+
+    await tester.pumpWidget(const SizedBox());
+    viewController.dispose();
+  });
+
   testWidgets('capture after a failed stream start completes null', (tester) async {
     platform.failNextStreamStart = PlatformException(code: 'startFailed');
     final controller = YuvCameraViewController();

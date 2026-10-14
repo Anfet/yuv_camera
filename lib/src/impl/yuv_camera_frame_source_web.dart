@@ -28,7 +28,9 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     ..muted = true;
   final web.HTMLCanvasElement _canvas = web.HTMLCanvasElement();
   web.MediaStream? _stream;
+  web.MediaStreamTrack? _videoTrack;
   web.ReadableStreamDefaultReader? _reader;
+  JSFunction? _endedListener;
   int? _videoFrameRequest;
   int _generation = 0;
   bool _running = false;
@@ -74,6 +76,10 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
       attach: (stream) async {
         _stream = stream;
         _video.srcObject = stream;
+        _videoTrack = stream.getVideoTracks().toDart.firstOrNull;
+        final listener = ((web.Event _) => _fail(StateError('Camera video track ended unexpectedly'), generation)).toJS;
+        _endedListener = listener;
+        _videoTrack?.addEventListener('ended', listener);
         await _video.play().toDart;
       },
       onStarted: () {
@@ -232,6 +238,11 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     _videoFrameRequest = null;
     final stream = _stream;
     _stream = null;
+    final track = _videoTrack;
+    _videoTrack = null;
+    final endedListener = _endedListener;
+    _endedListener = null;
+    if (track != null && endedListener != null) track.removeEventListener('ended', endedListener);
     if (stream != null) _release(stream);
     _video.srcObject = null;
   }

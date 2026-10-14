@@ -22,7 +22,10 @@ Future<void> runFrameReadLoop<F extends Object>({
         if (frame != null) close(frame);
         return;
       }
-      if (result.done) return;
+      if (result.done) {
+        onError(StateError('Camera frame reader ended unexpectedly'));
+        return;
+      }
       if (frame != null) await onFrame(frame);
     } catch (error) {
       if (isCurrent()) onError(error);
