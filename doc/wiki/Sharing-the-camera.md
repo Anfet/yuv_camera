@@ -40,7 +40,7 @@ puts `YuvCameraLeaseBuilder` around the widget that needs the controller.
 import 'package:flutter/material.dart';
 import 'package:yuv_camera/yuv_camera.dart';
 
-/// Owns the orchestrator of the app and opens the two screens.
+/// Owns one orchestrator and shows two camera previews at once.
 class SharedCameraApp extends StatefulWidget {
   const SharedCameraApp({super.key});
 
@@ -50,6 +50,8 @@ class SharedCameraApp extends StatefulWidget {
 
 class _SharedCameraAppState extends State<SharedCameraApp> {
   final YuvCameraOrchestrator _orchestrator = YuvCameraOrchestrator(closeDelay: const Duration(seconds: 2));
+  bool _showFirstPreview = true;
+  bool _showSecondPreview = true;
 
   @override
   void dispose() {
@@ -64,13 +66,26 @@ class _SharedCameraAppState extends State<SharedCameraApp> {
         appBar: AppBar(title: const Text('Shared camera')),
         body: Column(
           children: [
-            Expanded(child: CameraPanel(orchestrator: _orchestrator)),
-            ListenableBuilder(listenable: _orchestrator, builder: (context, child) => Text('Camera: ${_orchestrator.state.name}')),
-            Builder(
-              builder: (context) => FilledButton(
-                onPressed: () => Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => CameraPage(orchestrator: _orchestrator))),
-                child: const Text('Open second screen'),
+            Expanded(
+              child: Row(
+                children: [
+                  if (_showFirstPreview) Expanded(child: CameraPanel(orchestrator: _orchestrator)),
+                  if (_showSecondPreview) Expanded(child: CameraPanel(orchestrator: _orchestrator)),
+                ],
               ),
+            ),
+            ListenableBuilder(listenable: _orchestrator, builder: (context, child) => Text('Camera: ${_orchestrator.state.name}')),
+            Wrap(
+              children: [
+                FilledButton(
+                  onPressed: () => setState(() => _showFirstPreview = !_showFirstPreview),
+                  child: Text(_showFirstPreview ? 'Remove first preview' : 'Show first preview'),
+                ),
+                FilledButton(
+                  onPressed: () => setState(() => _showSecondPreview = !_showSecondPreview),
+                  child: Text(_showSecondPreview ? 'Remove second preview' : 'Show second preview'),
+                ),
+              ],
             ),
           ],
         ),
@@ -94,27 +109,14 @@ class CameraPanel extends StatelessWidget {
   }
 }
 
-/// A second screen with the same camera.
-class CameraPage extends StatelessWidget {
-  const CameraPage({super.key, required this.orchestrator});
-
-  final YuvCameraOrchestrator orchestrator;
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Second screen')),
-      body: CameraPanel(orchestrator: orchestrator),
-    );
-  }
-}
 ```
 
-Expected result: the first screen shows a progress indicator and then the preview, and the line under it goes through
-`opening` to `open`. Opening the second screen shows a preview straight away, because the first lease is still held.
-When the widgets are removed or the app is hidden, the leases are released, and two seconds later (`closeDelay`) the
-state goes to `closing` and `closed`. This recipe was compiled and analyzed for Windows and Web; the project has not
-run it on a physical camera, so test it on your target devices.
+Expected result: both panels are visible together. The orchestrator opens one camera controller and both
+`YuvCameraView` widgets use it. Choose **Remove second preview**: that panel's lease is released while the first preview
+remains visible and the camera stays open. Then choose **Remove first preview**: the final lease is released, then
+after the two-second `closeDelay` the state goes through `closing` to `closed`. If a preview is added during that delay,
+the existing camera remains open. This recipe was compiled and analyzed for Windows and Web; it has not run on a
+physical camera, so test it on your target devices.
 
 ## What `YuvCameraLeaseBuilder` does for you
 

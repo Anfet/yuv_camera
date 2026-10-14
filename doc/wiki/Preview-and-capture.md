@@ -148,6 +148,8 @@ What `capture()` does:
 - A second call while one is waiting returns the same pending result.
 - It returns `null` when the view is not attached to the controller (for example before the view was built), or when the
   view stops before a frame is drawn: the widget is disposed, the camera controller is replaced, or the stream fails.
+- An unexpected end of the camera stream is a stream error. The view stops and calls `onStreamStopped`; EOF is not a
+  successful end of a live camera delivery.
 - The returned image is a new image that you own, and you may mutate it. Its planes can keep the camera's row stride
   rather than being tightly packed; call `pack()` (see the
   [yuv_ffi wiki](https://github.com/Anfet/yuv_ffi/wiki/Images-and-layout#packed-or-preserved-layout)) if you need tight

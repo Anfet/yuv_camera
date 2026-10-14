@@ -122,6 +122,8 @@ private.
 
 `YuvCameraFrameSource` delivers every frame and leaves throttling to you; use it when no preview is shown, or when you
 need your own pacing. `YuvCameraView` and `YuvTransformView` create their own sources, so you do not start one for them.
+An unexpected end of a live camera stream is reported through `onError` and stops active deliveries; it is not a normal
+successful completion. Each consumer can stop independently while other consumers continue using the shared stream.
 This recipe counts the frames the camera delivers per second.
 
 ```dart

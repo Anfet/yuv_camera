@@ -53,7 +53,7 @@ class YuvCameraView extends StatefulWidget {
   /// Builds an overlay in the geometry of the currently displayed frame.
   final Widget Function(BuildContext context, YuvFrameGeometry geometry)? overlayBuilder;
 
-  /// Called after a stream error has stopped the frame stream.
+  /// Called after a stream error (including unexpected stream completion) has stopped the frame stream.
   /// Not called when the view is removed or given another controller.
   final VoidCallback? onStreamStopped;
 

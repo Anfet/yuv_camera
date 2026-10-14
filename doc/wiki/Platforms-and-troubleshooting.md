@@ -56,7 +56,7 @@ against exact commits. So far they have confirmed:
 
 | Check | Result |
 | --- | --- |
-| The example's tests | 108 passed: 86 camera, 7 device-check, 5 example navigation, 4 for the ML Kit input conversion, 3 for the shape-crop screen, 2 for the orchestrator screen and 1 for the face screen. |
+| The example's tests | VM coverage includes camera lifecycle, device-check, example navigation, ML Kit input conversion, shape crop, orchestrator and face-screen behavior. Exact test totals are recorded with each gate run. |
 | Native capture integration target | Passed on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build with the fake camera platform). |
 | Shape-crop and orchestrator-cycles integration targets | Passed on Windows, in Chrome (JavaScript build, with a fake media stream) and on a physical Pixel 3 (Android 12, `arm64-v8a`). |
 | Web camera source smoke and device-choice target | Passed in Chrome (JavaScript build), including two distinct fake video inputs. |

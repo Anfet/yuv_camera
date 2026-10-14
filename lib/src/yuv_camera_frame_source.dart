@@ -9,7 +9,7 @@ abstract interface class YuvCameraFrameSource {
   /// Creates the source for the current platform: `camera` streaming on native platforms and a browser media stream on Web.
   ///
   /// [controller] must be initialized. [onFrame] receives every frame; [onError] receives a stream failure after which the
-  /// source has stopped.
+  /// source has stopped. An unexpected end of the live stream is reported as an error, not as normal completion.
   /// Multiple sources created for the same controller share one platform stream; each source can stop independently.
   ///
   /// On Web the source opens a second media stream on the controller's device,

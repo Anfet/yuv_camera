@@ -1,5 +1,11 @@
 ## 0.0.1
 
+* Camera frame delivery now uses one shared native stream per controller while each consumer can stop independently;
+  unexpected stream EOF is reported as an error and terminates active deliveries.
+* Capture returns the frame actually drawn with the view geometry applied. Frame deliveries and their cached images are
+  immutable by contract; copy an image before an in-place operation. Sharing guidance demonstrates concurrent previews
+  and explains that releasing one lease leaves other consumers running.
+
 * First release of `yuv_camera`, extracted from the `yuv_ffi` example camera layer.
 * Public API: `YuvCameraView`, `YuvCameraViewController`, `YuvCameraFrame`, `YuvCameraFrameSource` and
   `YuvTransformView`. Requires `yuv_ffi: ^0.5.2`; works with `camera` 0.11 and 0.12 (`>=0.11.0+2 <0.13.0`).
@@ -27,7 +33,8 @@
   and device-check screens.
 * The package has no GitHub Actions workflows: its checks are the scripts in `tool/ci/`, run directly on the
   maintainer's machines.
-* Verified locally: 108 example tests, native capture on Windows (Release) and a physical Pixel 3 (Android 12, `arm64-v8a`), the
+* Verified locally: example VM coverage for camera lifecycle, device-check, navigation, image conversion, shape crop,
+  orchestrator and face-screen behavior; native capture on Windows (Release) and a physical Pixel 3 (Android 12, `arm64-v8a`), the
   shape-crop and orchestrator-cycles targets on Windows, in Chrome (JavaScript, fake device) and on Pixel 3, Web camera
   source smoke and device-choice target with two distinct fake video inputs in Chrome (JavaScript).
   Physical-camera behavior is not claimed beyond the documented iOS observation.
