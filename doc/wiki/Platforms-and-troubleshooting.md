@@ -57,9 +57,13 @@ against exact commits. So far they have confirmed:
 | Check | Result |
 | --- | --- |
 | The example's tests | VM coverage includes camera lifecycle, device-check, example navigation, ML Kit input conversion, shape crop, orchestrator and face-screen behavior. Exact test totals are recorded with each gate run. |
-| Native capture integration target | Passed on Windows (Release) and on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build with the fake camera platform). |
-| Shape-crop and orchestrator-cycles integration targets | Passed on Windows, in Chrome (JavaScript build, with a fake media stream) and on a physical Pixel 3 (Android 12, `arm64-v8a`). |
-| Web camera source smoke and device-choice target | Passed in Chrome (JavaScript build), including two distinct fake video inputs. |
+| Native capture integration target | Passed with the fake camera platform, which does not use a physical camera: on Windows (Release), a physical Pixel 3 (Android 12, `arm64-v8a`, debug build), Ubuntu 24.04 in a VM, macOS 15.6 (arm64) and the iOS 18.6 simulator. |
+| iOS 18.6 simulator fixture targets | Capture, shape-crop and BGRA targets pass on fixtures; no camera is involved. |
+| Shape-crop and orchestrator-cycles integration targets | Passed with a physical camera: Windows 10 built-in webcam (Release); Chrome (JavaScript build) with a physical webcam and no fake device; a physical Pixel 3 (Android 12, `arm64-v8a`); a webcam passed through to Ubuntu 24.04 in VirtualBox (not attached directly to the Linux machine); macOS 15.6 (arm64) built-in camera. |
+| macOS 15.6 preview check | Passed on the built-in camera: two previews, the second continuing after the first is removed, and final close. |
+| Web camera source smoke | Passed in Chrome (JavaScript build) with a physical webcam. |
+| Web device-choice target | Passed in Chrome (JavaScript build) on a fake media stream with two distinct fake video inputs. This is the only fake-stream result. |
+| iPhone 11, iOS 18.7.8 | Integration targets and Release device check pass: two previews, the second continuing after the first is removed, and landscape capture in Shape crop. |
 | iOS observation | The behavior documented on `YuvCameraFrame`: one iPhone, iOS 18.7, front camera, portrait and landscape. |
 
 A build, a passing emulator or a fake-stream target does not prove that a physical camera works on that platform. Other

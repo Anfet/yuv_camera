@@ -34,10 +34,13 @@
 * The package has no GitHub Actions workflows: its checks are the scripts in `tool/ci/`, run directly on the
   maintainer's machines.
 * Verified locally: example VM coverage for camera lifecycle, device-check, navigation, image conversion, shape crop,
-  orchestrator and face-screen behavior; native capture on Windows (Release) and a physical Pixel 3 (Android 12, `arm64-v8a`), the
-  shape-crop and orchestrator-cycles targets on Windows, in Chrome (JavaScript, fake device) and on Pixel 3, Web camera
-  source smoke and device-choice target with two distinct fake video inputs in Chrome (JavaScript).
-  Physical-camera behavior is not claimed beyond the documented iOS observation.
+  orchestrator and face-screen behavior; native capture target with the fake camera platform on Windows (Release), a
+  physical Pixel 3 (Android 12, `arm64-v8a`), Linux, macOS and the iOS 18.6 simulator; shape-crop and orchestrator-cycles
+  targets with a physical camera on Windows 10 (Release, built-in webcam), in Chrome (JavaScript, no fake device), on a
+  physical Pixel 3, on Ubuntu 24.04 with a webcam passed through VirtualBox, and on macOS 15.6 (built-in camera); Web camera
+  source smoke with a physical webcam in Chrome (JavaScript); device-choice in Chrome (JavaScript) on a fake stream with
+  two distinct fake video inputs only; iPhone 11 on iOS 18.7.8 for the integration targets and a Release device check.
+  Physical-camera results are limited to the devices and modes listed here.
 * README with package selection, platform setup (permissions, `camera_desktop` on desktop), a complete Quick start,
   ownership rules for frames and captures, and the verified-platform limits. `capture()` may return `null`; Safari,
   Firefox, `--wasm` builds and other devices are not claimed.
