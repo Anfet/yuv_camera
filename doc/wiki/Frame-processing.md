@@ -14,7 +14,7 @@ the [yuv_ffi wiki](https://github.com/Anfet/yuv_ffi/wiki/Processing-and-mutation
 | Member | Meaning |
 | --- | --- |
 | `width`, `height` | Size in pixels of the raw image. |
-| `format` | Pixel format of the raw image: `YuvPixelFormat.i420` or `YuvPixelFormat.bgra8888`, depending on what the camera delivers. |
+| `format` | Pixel format of the raw image: `YuvPixelFormat.nv12` (two-plane `yuv420`), `YuvPixelFormat.i420` (three-plane `yuv420`) or `YuvPixelFormat.bgra8888`, depending on what the camera delivers. |
 | `orientation` | A `YuvFrameOrientation`: how the raw image must be rotated, and whether mirrored, to appear upright. |
 | `timestamp` | Time since the frame source started. It restarts when the source starts again. |
 | `image` | The raw camera image as a `YuvImage`, imported on first access and cached. The camera's plane strides are preserved. |

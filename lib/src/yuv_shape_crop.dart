@@ -5,7 +5,7 @@ import 'package:yuv_ffi/yuv_ffi.dart';
 
 import 'yuv_crop_target.dart';
 
-/// The outline kept by [YuvImage.croppedToShape] inside the cropped rectangle.
+/// The outline kept by [YuvShapeCrop.croppedToShape] inside the cropped rectangle.
 enum YuvCropShape {
   /// The whole rectangle. A square rectangle comes from a [YuvCropTarget.square] target.
   rectangle,

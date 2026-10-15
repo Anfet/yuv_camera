@@ -51,9 +51,8 @@ Native sources accept the plugin's default image format, `ImageFormatGroup.yuv42
 Two-plane `yuv420` is imported as NV12; three-plane `yuv420` is imported as I420; one-plane BGRA remains packed.
 Plane strides and layouts are preserved. Malformed plane layouts stop the stream and report a `FormatException`; an
 unsupported format group reports `UnsupportedError`. YUV conversion uses BT.601 limited/video range as defined by
-`yuv_ffi`. Do not request `ImageFormatGroup.nv21` for this source; choose the default or a supported group. The iOS
-NV12 VM/simulator fixture models the plugin payload; physical iPhone NV12 capture has not been verified and remains a
-CHECK 9 obligation.
+`yuv_ffi`; full-range data and other color matrices are not detected. Do not request `ImageFormatGroup.nv21` for this source; choose the default or a supported group. The iOS
+NV12 VM/simulator fixture models the plugin payload; physical iPhone NV12 capture has not been verified.
 
 `onFrame` receives a `YuvCameraFrame`. Its `image` preserves source plane strides; `upright()` returns a cached packed,
 oriented image. Both belong to the delivery: call `copy()` before mutating either. Call `YuvFfi.initialize()` before
@@ -86,6 +85,6 @@ navigation away and back, background/resume, denied permissions and stream failu
 Confirm Android `minSdk >= 26`, iOS/macOS usage descriptions, macOS camera entitlement and the desktop provider;
 see [platform setup](README.md#platform-setup).
 
-Until both packages are published, development overrides can select the local pair as documented in the README.
+Until both packages are published, development overrides can select the local pair from a Git checkout, as documented in the README.
 Those results prove that pair only. After publication remove overrides, run `flutter pub get`, and confirm that
 `.dart_tool/package_config.json` resolves both packages from `hosted/pub.dev` before testing the published pair.

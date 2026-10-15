@@ -18,7 +18,7 @@ dependencies:
   camera_desktop: ^2.0.0
 ```
 
-`yuv_camera` requires `yuv_ffi: ^0.5.2` and works with `camera` 0.11 and 0.12. You use `yuv_ffi` types such as
+`yuv_camera` requires `yuv_ffi: ^0.5.2` and works with `camera` `>=0.12.1 <0.13.0`. You use `yuv_ffi` types such as
 `YuvImage` with it. `camera_desktop` is not a dependency of `yuv_camera`: your app adds it next to `camera` on desktop
 platforms.
 

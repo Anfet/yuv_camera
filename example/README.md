@@ -17,8 +17,9 @@ Step-by-step guides are in the [yuv_camera wiki](https://github.com/Anfet/yuv_ca
 
 From this directory, run `flutter pub get` and then `flutter run -d <device>` on a supported device. The example uses
 `yuv_camera` from `..` and `yuv_ffi: ^0.5.2`. To run it against a local `yuv_ffi` checkout instead, add an ignored
-`pubspec_overrides.yaml` in this directory (see the package README, "Local development"), or run
-`tool/check_pair.ps1` from the repository root, which does it for an exact pair of checkouts.
+`pubspec_overrides.yaml` in this directory (see the package README, "Local development"), or, from a Git checkout, run
+`tool/check_pair.ps1` from the repository root, which does it for an exact pair of checkouts. The pub.dev archive does
+not include `tool/`.
 
 On desktop, the example uses the `camera_desktop` federated implementation; the application, not `yuv_camera`,
 declares it. Linux builds require GStreamer development libraries; macOS needs `NSCameraUsageDescription` and the
@@ -27,15 +28,15 @@ ML Kit face detection runs only on Android and iOS; other platforms skip it. For
 
 ## Verified
 
-The checks are run from the repository root with the scripts in `tool/ci/` (see "Platforms and limits" in the package
-README); there is no hosted CI. Each result names its mode and device; exact test totals belong to each gate run.
+The checks are run from the root of the Git repository with the scripts in `tool/ci/` (not included in the pub.dev
+archive; see "Platforms and limits" in the package README); there is no hosted CI. Each result names its mode and device; exact test totals belong to each gate run.
 
 - `tool/ci/vm.ps1`: the example VM suite for camera lifecycle, device-check, navigation, image conversion, shape crop,
   orchestrator and face-screen behavior.
 - `tool/ci/windows.ps1` (release build): the native capture target with the fake camera platform, and the shape-crop and
   orchestrator-cycles targets with the Windows 10 built-in webcam.
-- `tool/ci/android.ps1` on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build): the native capture target with the
-  fake camera platform, and the orchestrator-cycles and shape-crop targets.
+- `tool/ci/android.ps1` on a physical Pixel 3 (Android 12, `arm64-v8a`): the native capture target with the
+  fake camera platform (debug build), and the orchestrator-cycles and shape-crop targets (Release build).
 - `tool/ci/linux.sh` on Ubuntu 24.04 in a VirtualBox VM: the native capture target with the fake camera platform; the
   shape-crop and orchestrator-cycles targets with the webcam passed through to the guest (not attached directly).
 - macOS 15.6 (arm64), native capture target with the fake camera platform (no physical camera): `tool/ci/macos.sh`

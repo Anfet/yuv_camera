@@ -57,7 +57,7 @@ class YuvCameraView extends StatefulWidget {
   /// Not called when the view is removed or given another controller.
   final VoidCallback? onStreamStopped;
 
-  /// Reports each frame confirmed as drawn; [hasShader] is its renderer state.
+  /// Reports each frame confirmed as drawn; the flag is [YuvFramePresenter.hasShader] for that frame.
   final ValueChanged<bool>? onFramePresented;
 
   @override

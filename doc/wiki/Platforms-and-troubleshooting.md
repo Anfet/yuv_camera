@@ -49,13 +49,14 @@ which reports every Windows camera as front. On macOS and Linux the package appl
   `camera` plugin's own Web preview; a laptop webcam usually has no facing mode, is reported as external and is mirrored too.
 - Native `yuv420` frames with two planes are NV12 (`Y` + interleaved `UV`); three planes are I420 (`Y`, `U`, `V`).
   One-plane `bgra8888` remains packed. Native row strides are preserved; malformed visible layouts terminate the stream
-  through `onError`. YUV conversion uses BT.601 limited/video range. The iOS NV12 fixture models plugin bytes only; physical
-  iPhone NV12 capture remains pending CHECK 9.
+  through `onError`. YUV conversion uses BT.601 limited/video range; the package does not detect full-range data or select
+  another color matrix. The iOS NV12 fixture models plugin bytes only; physical iPhone NV12 capture has not been verified.
 
 ## What is verified
 
 Backend availability, a successful build and a confirmed physical camera are different things. The checks run directly on
-the maintainer's machines with the scripts in `tool/ci/` (the repository has no hosted CI), and their results are recorded
+the maintainer's machines with the scripts in `tool/ci/` of the Git repository (the pub.dev archive does not include `tool/`;
+the repository has no hosted CI), and their results are recorded
 against exact commits. So far they have confirmed:
 
 | Check | Result |
@@ -140,6 +141,16 @@ set of required checks runs again before each release.
 - Check: are the GStreamer development packages installed?
 - Action: install `libgstreamer1.0-dev` and `libgstreamer-plugins-base1.0-dev` (or your distribution's equivalent), then
   build again.
+
+### On Web, `availableCameras()` throws `cameraNotReadable`
+
+- Symptom: in Chrome, `availableCameras()` throws a `CameraException` with the code `cameraNotReadable` before any camera is
+  chosen, so no preview starts. `YuvCameraOrchestrator.acquire()` ends with the same error, which it keeps as its error
+  state instead of hiding it.
+- Check: is a virtual camera registered with the system but not running, for example OBS Virtual Camera while OBS is not
+  providing it? The `camera_web` versions checked list every device and stop at the first one the browser cannot read.
+- Action: start the virtual camera (in OBS, Start Virtual Camera), or turn it off or unregister it so that only working
+  cameras remain, then reload the page. `yuv_camera` does not change how the plugin lists or opens devices.
 
 ### ML Kit gives no results on desktop or Web
 

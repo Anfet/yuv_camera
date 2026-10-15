@@ -64,7 +64,8 @@ stops the frame stream with an `UnsupportedError` on the first frame. Native
 three planes are imported as I420 (`Y`, `U`, `V`). One-plane BGRA remains
 packed. Plane row strides and layouts are preserved, and malformed layouts
 stop the stream through `onError`. YUV conversion uses BT.601 limited/video
-range as defined by `yuv_ffi`; BGRA has no YUV range conversion.
+range as defined by `yuv_ffi`. The package does not detect full-range data or
+select another color matrix, and BGRA has no YUV range conversion.
 
 The plugins' own documentation is the primary source for permission details:
 [`camera`](https://pub.dev/packages/camera) and
@@ -242,8 +243,10 @@ if (image != null) {
 
 Backend availability, building, and a confirmed physical camera are different
 things. The checks run directly on the maintainer's machines with the scripts
-in `tool/ci/` (the repository has no hosted CI), and their results are recorded
-against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
+in `tool/ci/` of the Git repository (the pub.dev archive does not include
+`tool/`; the repository has no hosted CI), and their results are recorded
+against exact commits. From the package root of a Git checkout:
+`pwsh -File tool/ci/vm.ps1`,
 `windows.ps1`, `android.ps1`, `web.ps1`, and `example.ps1` on Windows;
 `bash tool/ci/linux.sh` on Linux; `bash tool/ci/macos.sh` and
 `bash tool/ci/ios.sh` on macOS. So far they have confirmed:
@@ -251,22 +254,20 @@ against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
 - The example VM suite (`flutter test` in `example/`, run by `tool/ci/vm.ps1`, which builds `yuv_ffi.dll` from the
   resolved `yuv_ffi`), covering camera lifecycle, device-check, navigation, image conversion, shape crop, orchestrator
   and face screen behavior. Exact test totals are recorded with each gate run.
-- Example VM suite (`tool/ci/vm.ps1`, `flutter test` in `example/`): camera lifecycle, device-check, navigation, image
-  conversion, shape crop, orchestrator and face-screen behavior.
 - The native capture integration target with the fake camera platform (no physical camera): on Windows (Release), on a
   physical Pixel 3 (Android 12, `arm64-v8a`, debug build), on Linux (Ubuntu 24.04 in a VirtualBox VM), on macOS 15.6
   (arm64) and on the iOS 18.6 simulator.
 - The shape-crop and orchestrator-cycles integration targets with a physical camera:
   - the built-in webcam on Windows 10 (Release);
   - Chrome (JavaScript build) on Windows with a physical webcam, camera permission auto-approved and no fake device;
-  - a physical Pixel 3 (Android 12, `arm64-v8a`, debug build);
+  - a physical Pixel 3 (Android 12, `arm64-v8a`, Release build);
   - a webcam passed through to an Ubuntu 24.04 VirtualBox guest (not a camera attached directly to the Linux machine);
   - the built-in camera on macOS 15.6 (arm64), where the orchestrator cycles also confirmed two previews, the second
     continuing after the first is removed, and the final close.
 - The Web camera source smoke target in Chrome (JavaScript build) with a physical webcam on Windows.
 - The Web device-choice target in Chrome (JavaScript build) on a fake media stream with two distinct fake video inputs.
   It is the only fake-stream result and claims no physical camera.
-- The iOS 18.6 simulator fixture targets (capture, shape crop and BGRA) without a camera. The two-plane NV12 fixture target is prepared; physical iPhone NV12 capture remains pending CHECK 9.
+- The iOS 18.6 simulator fixture targets (capture, shape crop and BGRA) without a camera. The two-plane NV12 fixture target is prepared; physical iPhone NV12 capture has not been verified.
 - An iPhone 11 on iOS 18.7.8: the orchestrator, camera-flow and BGRA integration targets, and a signed Release device
   check (portrait idle and heavy load, landscape, face portrait and landscape, mirror, capture). The operator also
   confirmed two previews with the second continuing after the first is removed, and landscape capture in Shape crop.
@@ -292,7 +293,9 @@ Safari and Firefox), `--wasm` builds, other devices and OS versions are not clai
 
 ## Local development with an unpublished `yuv_ffi`
 
-To develop this package against a local `yuv_ffi` checkout, resolve it through ignored local overrides. Create
+Local development needs a Git checkout of this repository: the pub.dev archive does not include `tool/`, so the
+`tool/` scripts below are not available from a downloaded package. To develop this package against a local `yuv_ffi`
+checkout, resolve it through ignored local overrides. Create
 `pubspec_overrides.yaml` in the package root and in `example/` (both are in `.gitignore`):
 
 ```yaml

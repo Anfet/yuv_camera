@@ -1,27 +1,25 @@
 ## 0.0.1
 
-* Raise the minimum `camera` dependency to 0.12.1 after inconsistent physical Android preview results with 0.11.0+2.
-
-- Camera capture waits for a painted preview frame and stays pending while the view is offstage.
+* First release of `yuv_camera`, extracted from the `yuv_ffi` example camera layer.
+* Camera capture waits for a painted preview frame and stays pending while the view is offstage.
 * The orchestrator handles platform `CameraErrorEvent`s and cancels its subscription before disposing the controller.
-* Terminal controller or frame-stream errors now invalidate orchestrator leases and drain frame cancellation before
+* Terminal controller or frame-stream errors invalidate orchestrator leases and drain frame cancellation before
   disposal; `YuvCameraLeaseBuilder` can retry with a fresh controller without route navigation.
 * Native YUV frame sources document exclusive image-stream ownership and reject controllers with an already active
   image stream.
-* Camera frame delivery now uses one shared native stream per controller while each consumer can stop independently;
+* Camera frame delivery uses one shared native stream per controller while each consumer can stop independently;
   unexpected stream EOF is reported as an error and terminates active deliveries.
 * Capture returns the frame actually drawn with the view geometry applied. Frame deliveries and their cached images are
   immutable by contract; copy an image before an in-place operation. Sharing guidance demonstrates concurrent previews
   and explains that releasing one lease leaves other consumers running.
-
-* First release of `yuv_camera`, extracted from the `yuv_ffi` example camera layer.
 * Public API: `YuvCameraView`, `YuvCameraViewController`, `YuvCameraFrame`, `YuvCameraFrameSource` and
-  `YuvTransformView`. Requires `yuv_ffi: ^0.5.2`; works with `camera` 0.12 (`>=0.12.1 <0.13.0`).
+  `YuvTransformView`. Requires `yuv_ffi: ^0.5.2`; works with `camera` 0.12 (`>=0.12.1 <0.13.0`);
+  `camera` 0.11.0+2 is not supported because it produced inconsistent physical Android preview results.
 * Native frame sources accept the `yuv420` and `bgra8888` image format groups (the plugin defaults); another group stops
   the stream with an `UnsupportedError`.
 * Native two-plane `yuv420` frames are imported as NV12, three-plane frames as I420, and one-plane BGRA remains packed.
   Source strides are preserved; incompatible layouts stop the stream with a `FormatException`. YUV conversion uses
-  BT.601 limited/video range. The iOS NV12 fixture is not evidence of physical iPhone capture, which remains a CHECK 9 obligation.
+  BT.601 limited/video range; full-range data and other color matrices are not detected. The iOS NV12 fixture is not evidence of physical iPhone capture, which has not been verified.
 * Orchestrator: `YuvCameraOrchestrator` leases the single camera through `acquire()` and `YuvCameraLease.release()`,
   closes it after `closeDelay`, keeps at most one controller alive, and reports `YuvCameraState`;
   `YuvCameraLeaseBuilder` passes its initialized controller to a builder, retries after opening failures and releases
@@ -42,14 +40,14 @@
   `camera_web` previews are; iOS, macOS and Linux frames are upright and not mirrored.
 * Example application built on one `YuvCameraOrchestrator`: a home screen with Shape crop, Open & close, ML Kit face-detection
   and device-check screens.
-* The package has no GitHub Actions workflows: its checks are the scripts in `tool/ci/`, run directly on the
-  maintainer's machines.
+* The package has no GitHub Actions workflows: its checks are the scripts in `tool/ci/` of the Git repository (not
+  included in the pub.dev archive), run directly on the maintainer's machines.
 * Verified locally, with mode and device named per result: example VM suite (`tool/ci/vm.ps1`) for camera lifecycle,
   device-check, navigation, image conversion, shape crop, orchestrator and face-screen behavior; native capture target
   with the fake camera platform on Windows (Release), a physical Pixel 3 (Android 12, `arm64-v8a`, debug), Linux (Ubuntu
   24.04 VM), macOS 15.6 and the iOS 18.6 simulator; shape-crop and orchestrator-cycles targets with a physical camera on
   Windows 10 (Release, built-in webcam), in Chrome (JavaScript build) on Windows with a physical webcam and no fake device,
-  on a physical Pixel 3 (debug), on Ubuntu 24.04 with the webcam passed through VirtualBox (not attached directly), and on
+  on a physical Pixel 3 (Release), on Ubuntu 24.04 with the webcam passed through VirtualBox (not attached directly), and on
   the macOS 15.6 built-in camera (two previews, the second continuing after the first is removed, final close); Web camera
   source smoke with a physical webcam in Chrome (JavaScript build) on Windows; Web device-choice target in Chrome
   (JavaScript build) on a fake media stream with two distinct fake video inputs, the only fake-stream result; iOS 18.6
