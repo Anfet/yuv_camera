@@ -1,9 +1,10 @@
-import 'dart:typed_data';
-
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
+import 'package:yuv_camera/yuv_camera.dart';
 import 'package:yuv_camera/src/camera_image_import.dart';
 
 void main() {
@@ -18,7 +19,19 @@ void main() {
       'height': 3,
       'planes': <Map<dynamic, dynamic>>[
         <dynamic, dynamic>{
-          'bytes': Uint8List.fromList([82, 82, 82, 0xee, 82, 82, 82, 0xee, 82, 82, 82]),
+          'bytes': Uint8List.fromList([
+            82,
+            82,
+            82,
+            0xee,
+            82,
+            82,
+            82,
+            0xee,
+            82,
+            82,
+            82,
+          ]),
           'bytesPerRow': 4,
           'bytesPerPixel': null,
           'width': 3,
@@ -40,4 +53,102 @@ void main() {
     expect(image.uPlane.rowStride, 5);
     expect(image.toBgraBytes().take(4), [0, 1, 255, 255]);
   });
+
+  const runIosCamera = bool.fromEnvironment('YUV_IOS_CAMERA_RUNTIME');
+  const requestedLens = String.fromEnvironment(
+    'YUV_IOS_CAMERA_LENS',
+    defaultValue: 'back',
+  );
+  testWidgets(
+    'real iOS $requestedLens camera provides YUV420 frames to preview and capture',
+    (tester) async {
+      expect(defaultTargetPlatform, TargetPlatform.iOS);
+      expect(requestedLens, anyOf('front', 'back'));
+      await YuvFfi.initialize();
+      final cameras = await availableCameras();
+      final lens = requestedLens == 'front'
+          ? CameraLensDirection.front
+          : CameraLensDirection.back;
+      final camera = cameras
+          .where((candidate) => candidate.lensDirection == lens)
+          .firstOrNull;
+      expect(
+        camera,
+        isNotNull,
+        reason:
+            'The requested $requestedLens camera must be present on this device.',
+      );
+
+      final controller = CameraController(
+        camera!,
+        ResolutionPreset.medium,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.yuv420,
+      );
+      final viewController = YuvCameraViewController();
+      var frameCount = 0;
+      var presentedCount = 0;
+      final frameFormats = <YuvPixelFormat>[];
+      try {
+        await controller.initialize();
+        expect(controller.value.isInitialized, isTrue);
+        final picture = await controller.takePicture();
+        expect(
+          picture.path,
+          isNotEmpty,
+          reason: 'A still capture should complete before preview starts.',
+        );
+
+        CameraImage? rawFrame;
+        await controller.startImageStream((frame) => rawFrame ??= frame);
+        await _waitFor(tester, () => rawFrame != null);
+        expect(rawFrame!.format.group, ImageFormatGroup.yuv420);
+        expect(rawFrame!.planes, hasLength(2));
+        await controller.stopImageStream();
+
+        await tester.pumpWidget(
+          MaterialApp(
+            home: Scaffold(
+              body: SizedBox(
+                width: 320,
+                height: 240,
+                child: YuvCameraView(
+                  cameraController: controller,
+                  viewController: viewController,
+                  onFrameInterval: Duration.zero,
+                  onFrame: (frame) {
+                    frameCount++;
+                    frameFormats.add(frame.format);
+                  },
+                  onFramePresented: (_) => presentedCount++,
+                ),
+              ),
+            ),
+          ),
+        );
+        await _waitFor(tester, () => frameCount > 0 && presentedCount > 0);
+        expect(frameFormats, contains(YuvPixelFormat.nv12));
+        final previewCapture = await viewController.capture();
+        expect(previewCapture, isNotNull);
+        expect(previewCapture!.format, YuvPixelFormat.nv12);
+      } finally {
+        await tester.pumpWidget(const SizedBox());
+        viewController.dispose();
+        await controller.dispose();
+      }
+    },
+    skip: !runIosCamera,
+    timeout: const Timeout(Duration(minutes: 2)),
+  );
+}
+
+Future<void> _waitFor(WidgetTester tester, bool Function() condition) async {
+  for (var attempt = 0; attempt < 300 && !condition(); attempt++) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
+  expect(
+    condition(),
+    isTrue,
+    reason: 'The real camera did not produce a preview frame.',
+  );
 }

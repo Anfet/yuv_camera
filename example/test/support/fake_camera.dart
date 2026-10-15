@@ -72,8 +72,9 @@ class FakeCameraPlatform extends CameraPlatform {
   final List<int> listens = [];
   final List<int> cancels = [];
   final List<int> overlappingStarts = [];
+  final List<int> cameraErrorCancellations = [];
 
-  /// Platform calls in order: `create:<id>`, `listen:<id>`, `cancel:<id>`, `dispose:<id>`.
+  /// Platform calls in order, including camera-error cancellation before `dispose:<id>`.
   final List<String> events = [];
 
   /// Cameras returned by `availableCameras`.
@@ -90,6 +91,9 @@ class FakeCameraPlatform extends CameraPlatform {
 
   /// When set, `dispose` waits for it.
   Completer<void>? disposeGate;
+
+  /// When set, cancelling a camera-error subscription waits for it.
+  Completer<void>? cameraErrorCancelGate;
 
   /// Delivers frames and errors synchronously, for ordering-sensitive widget regressions.
   bool synchronousStreams = false;
@@ -148,8 +152,18 @@ class FakeCameraPlatform extends CameraPlatform {
   Stream<DeviceOrientationChangedEvent> onDeviceOrientationChanged() => const Stream.empty();
 
   @override
-  Stream<CameraErrorEvent> onCameraError(int cameraId) =>
-      _events.stream.where((event) => event.cameraId == cameraId && event is CameraErrorEvent).cast<CameraErrorEvent>();
+  Stream<CameraErrorEvent> onCameraError(int cameraId) => Stream<CameraErrorEvent>.multi((controller) {
+    final subscription = _events.stream
+        .where((event) => event.cameraId == cameraId && event is CameraErrorEvent)
+        .cast<CameraErrorEvent>()
+        .listen(controller.add, onError: controller.addError, onDone: controller.close);
+    controller.onCancel = () async {
+      cameraErrorCancellations.add(cameraId);
+      events.add('cancelCameraError:$cameraId');
+      await subscription.cancel();
+      await cameraErrorCancelGate?.future;
+    };
+  });
 
   @override
   Stream<CameraImageData> onStreamedFrameAvailable(int cameraId, {CameraImageStreamOptions? options}) {

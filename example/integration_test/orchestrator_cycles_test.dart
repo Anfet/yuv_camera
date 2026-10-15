@@ -21,10 +21,12 @@ void main() {
     StackTrace? scenarioStack;
     Object? cleanupError;
     StackTrace? cleanupStack;
+    var failureStage = 'first bare lease acquire';
 
     try {
       // (1) Ten bare leases: each one opens a camera, and releasing it closes the camera again.
       for (int cycle = 1; cycle <= 10; cycle++) {
+        failureStage = 'bare lease cycle $cycle acquire';
         final acquiring = orchestrator.acquire();
         await _waitFor(
           tester,
@@ -33,6 +35,7 @@ void main() {
           'cycle $cycle: the camera to open',
         );
         final lease = await acquiring;
+        failureStage = 'bare lease cycle $cycle release';
         expect(orchestrator.state, YuvCameraState.open, reason: 'cycle $cycle: state after acquire');
         expect(lease.controller.value.isInitialized, isTrue, reason: 'cycle $cycle: controller after acquire');
         lease.release();
@@ -147,6 +150,7 @@ void main() {
     } catch (error, stack) {
       scenarioError = error;
       scenarioStack = stack;
+      binding.reportData = {'failureStage': failureStage, 'error': '$error', 'orchestratorState': orchestrator.state.name};
     } finally {
       try {
         await tester.pumpWidget(const SizedBox());

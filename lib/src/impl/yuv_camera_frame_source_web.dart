@@ -17,11 +17,26 @@ import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
 /// Web camera source backed by `MediaStreamTrackProcessor`, with a canvas
 /// fallback for browsers that do not expose it.
 final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
-  YuvCameraFrameSourceImpl(this.controller, {required this.onFrame, required this.onError});
+  YuvCameraFrameSourceImpl(this.controller, {
+    required this.onFrame,
+    required this.onError,
+    @visibleForTesting this.forceCanvasCallbackForTesting = false,
+    @visibleForTesting this.forceVisibleRectMismatchForTesting = false,
+    @visibleForTesting this.onBranchForTesting,
+    @visibleForTesting this.onVideoFrameClosedForTesting,
+  });
 
   final CameraController controller;
   final void Function(YuvCameraFrame frame) onFrame;
   final void Function(Object error) onError;
+  @visibleForTesting
+  final bool forceCanvasCallbackForTesting;
+  @visibleForTesting
+  final bool forceVisibleRectMismatchForTesting;
+  @visibleForTesting
+  final void Function(String branch)? onBranchForTesting;
+  @visibleForTesting
+  final void Function()? onVideoFrameClosedForTesting;
   final Stopwatch _clock = Stopwatch();
   final web.HTMLVideoElement _video = web.HTMLVideoElement()
     ..autoplay = true
@@ -94,6 +109,10 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   }
 
   bool _startTrackProcessor(int generation) {
+    if (forceCanvasCallbackForTesting) {
+      onBranchForTesting?.call('processorUnavailable');
+      return false;
+    }
     final stream = _stream;
     if (stream == null) return false;
     final tracks = stream.getVideoTracks().toDart;
@@ -134,7 +153,8 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
       final height = videoFrame.displayHeight;
       if (width <= 0 || height <= 0) return;
       final visibleRect = videoFrame.visibleRect;
-      if (videoFrame.format == null || (visibleRect != null && (visibleRect.width != width || visibleRect.height != height))) {
+      if (forceVisibleRectMismatchForTesting || videoFrame.format == null || (visibleRect != null && (visibleRect.width != width || visibleRect.height != height))) {
+        if (forceVisibleRectMismatchForTesting) onBranchForTesting?.call('visibleRectMismatch');
         // Opaque frames expose no format that copyTo can read; other frames
         // may need display scaling that copyTo does not apply. Canvas renders
         // both at the same dimensions as the preview.
@@ -146,21 +166,16 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
         _deliverBgra(width, height, Uint8List.fromList(context.getImageData(0, 0, width, height).data.toDart), false);
         return;
       }
-      // copyTo writes into the JS array; under dart2wasm `Uint8List.toJS` is a
-      // copy, so the bytes are read back from the array it filled.
-      final buffer = Uint8List(width * height * 4).toJS;
-      var bgra = _useBgra;
-      try {
-        await videoFrame.copyTo(buffer, bgra ? _bgraOptions : _rgbaOptions).toDart;
-      } catch (_) {
-        // A browser that cannot convert to BGRA rejects the call; RGBA is then
-        // converted on import, and every later frame skips the failing attempt.
-        if (!bgra) rethrow;
-        _useBgra = false;
-        bgra = false;
-        await videoFrame.copyTo(buffer, _rgbaOptions).toDart;
-      }
-      if (generation == _generation && !_disposed) _deliverBgra(width, height, buffer.toDart, bgra);
+      final copied = await copyVideoFrameBytesForTesting(
+        width: width,
+        height: height,
+        useBgra: _useBgra,
+        copyBgra: (buffer) async { await videoFrame.copyTo(buffer, _bgraOptions).toDart; },
+        copyRgba: (buffer) async { await videoFrame.copyTo(buffer, _rgbaOptions).toDart; },
+        onRgbaFallback: () => onBranchForTesting?.call('bgraRejected'),
+      );
+      if (!copied.isBgra) _useBgra = false;
+      if (generation == _generation && !_disposed) _deliverBgra(width, height, copied.bytes, copied.isBgra);
     } finally {
       _processing = false;
       _closeVideoFrame(videoFrame);
@@ -171,6 +186,7 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     if (!_running) return;
     _videoFrameRequest = _video.requestVideoFrameCallback(
       ((num _, web.VideoFrameMetadata _) {
+        if (forceCanvasCallbackForTesting) onBranchForTesting?.call('canvasCallback');
         _captureCanvas();
         _scheduleNext();
       }).toJS,
@@ -266,11 +282,39 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     stop();
   }
 
-  void _closeVideoFrame(web.VideoFrame frame) => frame.close();
+  void _closeVideoFrame(web.VideoFrame frame) {
+    frame.close();
+    onVideoFrameClosedForTesting?.call();
+  }
 
   void _release(web.MediaStream stream) {
     for (final track in stream.getTracks().toDart) {
       track.stop();
     }
   }
+}
+
+/// Copies frame bytes and falls back to RGBA when the browser rejects BGRA.
+@visibleForTesting
+Future<({Uint8List bytes, bool isBgra})> copyVideoFrameBytesForTesting({
+  required int width,
+  required int height,
+  required bool useBgra,
+  required Future<void> Function(web.AllowSharedBufferSource buffer) copyBgra,
+  required Future<void> Function(web.AllowSharedBufferSource buffer) copyRgba,
+  void Function()? onRgbaFallback,
+}) async {
+  // dart2wasm copies `Uint8List.toJS`; return the JS array the browser wrote.
+  final buffer = Uint8List(width * height * 4).toJS;
+  var isBgra = useBgra;
+  try {
+    await (isBgra ? copyBgra : copyRgba)(buffer);
+  } catch (_) {
+    // Browsers that reject BGRA can still write RGBA, which is converted on import.
+    if (!isBgra) rethrow;
+    onRgbaFallback?.call();
+    isBgra = false;
+    await copyRgba(buffer);
+  }
+  return (bytes: buffer.toDart, isBgra: isBgra);
 }

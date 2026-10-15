@@ -1,6 +1,7 @@
 ## 0.0.1
 
 - Camera capture waits for a painted preview frame and stays pending while the view is offstage.
+* The orchestrator handles platform `CameraErrorEvent`s on `camera` 0.11.0+2 and cancels its subscription before disposing the controller.
 * Terminal controller or frame-stream errors now invalidate orchestrator leases and drain frame cancellation before
   disposal; `YuvCameraLeaseBuilder` can retry with a fresh controller without route navigation.
 * Native YUV frame sources document exclusive image-stream ownership and reject controllers with an already active

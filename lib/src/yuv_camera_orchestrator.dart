@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:camera/camera.dart';
+import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:yuv_camera/src/camera_stream_lifecycle.dart';
 
@@ -160,6 +161,16 @@ class YuvCameraOrchestrator extends ChangeNotifier {
       final lifecycle = CameraStreamLifecycle.forController(activeController);
       lifecycle.addErrorListener(lifecycleListener);
       _lifecycleListeners[activeController] = lifecycleListener;
+      try {
+        _cameraErrorSubscriptions[activeController] = CameraPlatform.instance
+            .onCameraError(activeController.cameraId)
+            .listen(
+              (event) => _terminalController(activeController, CameraException('cameraError', event.description)),
+              onError: (Object error) => _terminalController(activeController, error),
+            );
+      } on UnimplementedError {
+        // Older/custom platform implementations may expose errors only through CameraController.value.
+      }
     } catch (error) {
       if (controller != null) await _disposeController(controller);
       _transition = null;
@@ -190,6 +201,16 @@ class YuvCameraOrchestrator extends ChangeNotifier {
     try {
       final listener = _controllerListeners.remove(controller);
       if (listener != null) controller.removeListener(listener);
+      final cameraErrorSubscription = _cameraErrorSubscriptions.remove(controller);
+      if (cameraErrorSubscription != null) {
+        try {
+          await cameraErrorSubscription.cancel();
+        } catch (error, stack) {
+          FlutterError.reportError(
+            FlutterErrorDetails(exception: error, stack: stack, library: 'yuv_camera', context: ErrorDescription('cancelling camera error events')),
+          );
+        }
+      }
       final lifecycle = CameraStreamLifecycle.forController(controller);
       final lifecycleListener = _lifecycleListeners.remove(controller);
       if (lifecycleListener != null) lifecycle.removeErrorListener(lifecycleListener);
@@ -261,6 +282,7 @@ class YuvCameraOrchestrator extends ChangeNotifier {
   final Set<YuvCameraLease> _leases = {};
   final Map<CameraController, VoidCallback> _controllerListeners = {};
   final Map<CameraController, void Function(Object error)> _lifecycleListeners = {};
+  final Map<CameraController, StreamSubscription<CameraErrorEvent>> _cameraErrorSubscriptions = {};
 }
 
 /// A claim on the camera of a [YuvCameraOrchestrator], returned by [YuvCameraOrchestrator.acquire].

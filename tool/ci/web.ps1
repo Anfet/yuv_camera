@@ -26,7 +26,7 @@ try {
   & (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/shape_crop_test.dart' 'web-server' '--browser-name=chrome' '--headless' '--web-browser-flag=--use-fake-device-for-media-stream' '--web-browser-flag=--use-fake-ui-for-media-stream' '--no-pub'
   if ($LASTEXITCODE -ne 0) { throw "Web shape crop target failed with exit code $LASTEXITCODE" }
   Write-Output 'PASS Chrome shape crop target.'
-  & (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/orchestrator_cycles_test.dart' 'web-server' '--browser-name=chrome' '--headless' '--web-browser-flag=--use-fake-device-for-media-stream' '--web-browser-flag=--use-fake-ui-for-media-stream' '--no-pub'
+  & (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/orchestrator_cycles_test.dart' 'web-server' '--browser-name=chrome' '--headless' '--web-browser-flag=--use-fake-device-for-media-stream=device-count=2' '--web-browser-flag=--use-fake-ui-for-media-stream' '--no-pub'
   if ($LASTEXITCODE -ne 0) { throw "Web orchestrator cycles target failed with exit code $LASTEXITCODE" }
   Write-Output 'PASS Chrome orchestrator cycles target.'
 } finally { if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force } }

@@ -18,6 +18,15 @@ fi
 xcrun simctl bootstatus "$simulator_id" -b
 bash "$repository_root/tool/ci/drive.sh" integration_test/camera_capture_native_test.dart "$simulator_id" --no-pub
 bash "$repository_root/tool/ci/drive.sh" integration_test/shape_crop_test.dart "$simulator_id" --no-pub
+bash "$repository_root/tool/ci/drive.sh" integration_test/ios_yuv420_camera_frame_test.dart "$simulator_id" --no-pub
 # The simulator has no camera. Run the real lifecycle separately on a physical iPhone:
 # bash tool/ci/drive.sh integration_test/orchestrator_cycles_test.dart <iphone-id> --no-pub
 bash "$repository_root/tool/ci/drive.sh" integration_test/ios_bgra_camera_frame_test.dart "$simulator_id" --no-pub
+if [[ -n "${YUV_IOS_DEVICE_ID:-}" ]]; then
+  for lens in front back; do
+    bash "$repository_root/tool/ci/drive.sh" integration_test/ios_yuv420_camera_frame_test.dart "$YUV_IOS_DEVICE_ID" --no-pub \
+      --dart-define=YUV_IOS_CAMERA_RUNTIME=true --dart-define="YUV_IOS_CAMERA_LENS=$lens"
+  done
+else
+  echo 'PENDING physical iPhone YUV420 preview/capture for front and back cameras: set YUV_IOS_DEVICE_ID before rerunning ios.sh.'
+fi

@@ -172,22 +172,37 @@ void main() {
     final orchestrator = YuvCameraOrchestrator();
     await pumpView(tester, orchestrator);
     await settle(tester);
-    platform.disposeGate = Completer<void>();
+    platform.cameraErrorCancelGate = Completer<void>();
 
+    platform.emitCameraError(99, 'unrelated camera');
+    await settle(tester);
+    expect(orchestrator.state, YuvCameraState.open);
     platform.emitCameraError(1, 'camera disconnected');
+    platform.emitCameraError(1, 'duplicate camera error');
     await settle(tester);
 
     expect(orchestrator.state, YuvCameraState.closing);
-    expect(platform.disposedCameras, [1]);
+    expect(platform.cameraErrorCancellations, contains(1));
+    expect(platform.disposedCameras, isEmpty);
     expect(platform.createdCameras, 1);
-    platform.disposeGate!.complete();
+    platform.cameraErrorCancelGate!.complete();
     await settle(tester);
+    expect(platform.disposedCameras, [1]);
+    expect(platform.events.indexOf('cancelCameraError:1'), lessThan(platform.events.indexOf('dispose:1')));
     expect(find.textContaining('camera disconnected'), findsOneWidget);
     await tester.tap(find.text('Retry'));
     await settle(tester);
 
     expect(orchestrator.state, YuvCameraState.open);
     expect(platform.createdCameras, 2);
+    platform.emitCameraError(1, 'late old-camera event');
+    platform.emitCameraError(99, 'foreign camera event');
+    await settle(tester);
+    expect(orchestrator.state, YuvCameraState.open);
+    platform.emitCameraError(2, 'replacement camera disconnected');
+    await settle(tester);
+    expect(orchestrator.state, YuvCameraState.closed);
+    expect(platform.disposedCameras, [1, 2]);
   });
 
   testWidgets('custom retry clears the error and ignores repeated or already leased requests', (tester) async {

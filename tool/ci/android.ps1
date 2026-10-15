@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+  [ValidateSet('Debug', 'Release')][string] $BuildMode = 'Debug'
+)
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -55,7 +57,8 @@ $targets = @(
   'integration_test/orchestrator_cycles_test.dart',
   'integration_test/shape_crop_test.dart'
 )
-$apk = 'build/app/outputs/flutter-apk/app-debug.apk'
+$buildModeArgument = "--$($BuildMode.ToLowerInvariant())"
+$apk = "build/app/outputs/flutter-apk/app-$($BuildMode.ToLowerInvariant()).apk"
 
 $repositoryRoot = Get-CameraRepositoryRoot
 Push-Location (Join-Path $repositoryRoot 'example')
@@ -66,7 +69,7 @@ try {
 }
 
 foreach ($target in $targets) {
-  # One debug APK per target: its versionCode is the installed one plus one, so `adb install -r` always upgrades.
+  # One APK per target: its versionCode is the installed one plus one, so `adb install -r` always upgrades.
   Push-Location (Join-Path $repositoryRoot 'example')
   try {
     $packageInfo = (& $adb -s $serial shell dumpsys package $packageName 2>&1 | ForEach-Object { $_.ToString() }) -join "`n"
@@ -83,8 +86,8 @@ foreach ($target in $targets) {
       $installed = [long]$versionMatches[0].Groups[1].Value
     }
     $buildNumber = $installed + 1
-    Write-Output "Android target: $target; installed versionCode=$installed; building versionCode=$buildNumber"
-    Invoke-CameraCommand flutter 'build', 'apk', '--debug', "--target=$target", '--target-platform', 'android-arm64', "--build-number=$buildNumber"
+    Write-Output "Android target: $target; mode=$BuildMode; installed versionCode=$installed; building versionCode=$buildNumber"
+    Invoke-CameraCommand flutter 'build', 'apk', $buildModeArgument, "--target=$target", '--target-platform', 'android-arm64', "--build-number=$buildNumber"
 
     $installOutput = @(& $adb -s $serial install -r (Resolve-Path -LiteralPath $apk).Path 2>&1 | ForEach-Object { $_.ToString() })
     if ($LASTEXITCODE -ne 0 -or -not ($installOutput | Where-Object { $_ -match 'Success' })) {
@@ -99,5 +102,5 @@ foreach ($target in $targets) {
   } finally {
     & $adb -s $serial shell am force-stop $packageName
   }
-  Write-Output "PASS $target on $model ($serial)."
+  Write-Output "PASS $target on $model ($serial), mode=$BuildMode, abi=arm64-v8a."
 }
