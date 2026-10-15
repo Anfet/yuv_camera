@@ -17,10 +17,11 @@ class YuvCameraLeaseBuilder extends StatefulWidget {
   /// Builds the child with the initialized, leased camera controller.
   final Widget Function(BuildContext context, CameraController controller) builder;
 
-  /// Builds content without a lease: error is the opening failure, or null while opening or hidden.
+  /// Builds content without a lease: error is the opening or terminal controller/stream failure, or null while opening or hidden.
   ///
   /// Retry starts a new attempt after failure; it does nothing while hidden, opening or already leased. Without this
-  /// builder, a progress indicator is shown while opening and an error message with a Retry button on failure.
+  /// builder, a progress indicator is shown while opening and an error message with a Retry button on failure. After a
+  /// terminal failure, Retry waits for frame cancellation and controller disposal before opening a replacement.
   final Widget Function(BuildContext context, Object? error, VoidCallback retry)? placeholderBuilder;
 
   @override
@@ -53,6 +54,7 @@ class _YuvCameraLeaseBuilderState extends State<YuvCameraLeaseBuilder> {
     _visible =
         WidgetsBinding.instance.lifecycleState != AppLifecycleState.hidden && WidgetsBinding.instance.lifecycleState != AppLifecycleState.paused;
     _lifecycleListener = AppLifecycleListener(onHide: _hide, onShow: _show);
+    widget.orchestrator.addListener(_orchestratorChanged);
     _acquire();
   }
 
@@ -60,6 +62,8 @@ class _YuvCameraLeaseBuilderState extends State<YuvCameraLeaseBuilder> {
   void didUpdateWidget(covariant YuvCameraLeaseBuilder oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (oldWidget.orchestrator == widget.orchestrator) return;
+    oldWidget.orchestrator.removeListener(_orchestratorChanged);
+    widget.orchestrator.addListener(_orchestratorChanged);
     _releaseAfterFrame();
     _error = null;
     _acquire();
@@ -68,9 +72,24 @@ class _YuvCameraLeaseBuilderState extends State<YuvCameraLeaseBuilder> {
   @override
   void dispose() {
     _lifecycleListener.dispose();
+    widget.orchestrator.removeListener(_orchestratorChanged);
     _request++;
     _lease?.release();
     super.dispose();
+  }
+
+  void _orchestratorChanged() {
+    if (!mounted) return;
+    final orchestrator = widget.orchestrator;
+    if (orchestrator.controller == null && _lease != null) {
+      _lease?.release();
+      _lease = null;
+      _acquiring = false;
+      _error = orchestrator.error;
+    } else if (orchestrator.state == YuvCameraState.opening) {
+      _error = null;
+    }
+    setState(() {});
   }
 
   void _hide() {

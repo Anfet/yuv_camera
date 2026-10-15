@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
 
 import 'impl/yuv_camera_frame_source_web.dart' if (dart.library.io) 'impl/yuv_camera_frame_source_io.dart' as impl;
+import 'camera_stream_lifecycle.dart';
 import 'yuv_camera_frame.dart';
 
 /// Delivers every camera frame and leaves throttling to its consumer.
@@ -11,6 +12,9 @@ abstract interface class YuvCameraFrameSource {
   /// [controller] must be initialized. [onFrame] receives every frame; [onError] receives a stream failure after which the
   /// source has stopped. An unexpected end of the live stream is reported as an error, not as normal completion.
   /// Multiple sources created for the same controller share one platform stream; each source can stop independently.
+  /// A native source owns frame streaming on its controller. Do not also call `startImageStream`, start video recording
+  /// with an `onAvailable` callback, or subscribe directly to platform frames while this source is active. An already
+  /// streaming controller is rejected; later external starts cannot be intercepted reliably.
   ///
   /// On Web the source opens a second media stream on the controller's device,
   /// matched by its unique, non-empty camera label. Empty, missing or duplicate
@@ -18,8 +22,8 @@ abstract interface class YuvCameraFrameSource {
   /// and optional fps are requested as `ideal` constraints, which the browser
   /// may adjust. Device enumeration and stream-opening failures reach [onError].
   ///
-  /// On native platforms the controller's `imageFormatGroup` must be the plugin default, `ImageFormatGroup.yuv420` or
-  /// `ImageFormatGroup.bgra8888`; another group stops the source with an [UnsupportedError] on the first frame.
+  /// Native `yuv420` frames with two planes are imported as NV12; three-plane frames are imported as I420.
+  /// A single-plane `bgra8888` frame remains packed BGRA. Unsupported plane layouts stop the source and reach [onError].
   factory YuvCameraFrameSource(
     CameraController controller, {
     required void Function(YuvCameraFrame frame) onFrame,
@@ -44,11 +48,14 @@ final Expando<_CameraFrameSourceHub> _hubs = Expando<_CameraFrameSourceHub>();
 final class _CameraFrameSourceHub {
   _CameraFrameSourceHub(this._controller) {
     _backend = impl.YuvCameraFrameSourceImpl(_controller, onFrame: _deliver, onError: _fail);
+    _lifecycle.registerDrain(_drain);
+    _controller.addListener(_controllerChanged);
   }
 
   final CameraController _controller;
   final Set<_FrameSourceConsumer> _consumers = {};
   late final impl.YuvCameraFrameSourceImpl _backend;
+  late final CameraStreamLifecycle _lifecycle = CameraStreamLifecycle.forController(_controller);
   Future<void>? _opening;
   bool _terminal = false;
   int _generation = 0;
@@ -61,6 +68,11 @@ final class _CameraFrameSourceHub {
 
   Future<void> start(_FrameSourceConsumer consumer) async {
     if (consumer._disposed) return;
+    if (_lifecycle.isClosing) {
+      consumer._end();
+      consumer._onError(StateError('The camera controller is closing.'));
+      return;
+    }
     final wasIdle = !_consumers.any((item) => item._running);
     consumer._begin();
     if (wasIdle || _terminal) {
@@ -126,6 +138,7 @@ final class _CameraFrameSourceHub {
   void _fail(Object error) {
     if (_terminal) return;
     _terminal = true;
+    _lifecycle.reportError(error);
     _generation++;
     final recipients = [
       for (final consumer in _consumers)
@@ -149,6 +162,20 @@ final class _CameraFrameSourceHub {
         );
       }
     }
+  }
+
+  void _controllerChanged() {
+    if (_controller.value.hasError) {
+      _fail(StateError(_controller.value.errorDescription ?? 'The camera controller reported an error.'));
+    }
+  }
+
+  Future<void> _drain() async {
+    _generation++;
+    for (final consumer in _consumers) {
+      consumer._end();
+    }
+    await _backend.stopAndWait();
   }
 }
 

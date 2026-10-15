@@ -39,11 +39,21 @@ released package API. Orchestrator notifications are coalesced in a microtask; l
 `onStreamStopped` on both preview widgets reports a stream error. It does not report ordinary removal or controller
 replacement. Remove application code that used that callback as its normal disposal signal.
 
+With an active YUV source, the source owns native frame delivery. Do not also call `startImageStream`, start video
+recording with `onAvailable`, or subscribe directly to platform frames on that controller. If a `YuvCameraOrchestrator`
+controller reports a terminal error, its leases are invalidated and the controller is disposed after stream cancellation
+finishes. `YuvCameraLeaseBuilder` then offers Retry, which opens a new controller without route navigation. A manually
+owned controller remains the application's responsibility after `onStreamStopped`.
+
 ## Frames and capture
 
 Native sources accept the plugin's default image format, `ImageFormatGroup.yuv420`, or `ImageFormatGroup.bgra8888`.
-An unsupported delivered format stops the stream and reports `UnsupportedError`. Do not request
-`ImageFormatGroup.nv21` for this source; choose the default or a supported group.
+Two-plane `yuv420` is imported as NV12; three-plane `yuv420` is imported as I420; one-plane BGRA remains packed.
+Plane strides and layouts are preserved. Malformed plane layouts stop the stream and report a `FormatException`; an
+unsupported format group reports `UnsupportedError`. YUV conversion uses BT.601 limited/video range as defined by
+`yuv_ffi`. Do not request `ImageFormatGroup.nv21` for this source; choose the default or a supported group. The iOS
+NV12 VM/simulator fixture models the plugin payload; physical iPhone NV12 capture has not been verified and remains a
+CHECK 9 obligation.
 
 `onFrame` receives a `YuvCameraFrame`. Its `image` preserves source plane strides; `upright()` returns a cached packed,
 oriented image. Both belong to the delivery: call `copy()` before mutating either. Call `YuvFfi.initialize()` before

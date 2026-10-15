@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:camera/camera.dart';
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/foundation.dart';
@@ -21,6 +20,8 @@ void main() {
     controller = CameraController((await availableCameras()).first, ResolutionPreset.medium, enableAudio: false);
     await controller.initialize();
   });
+
+  setUpAll(YuvFfi.initialize);
 
   tearDown(() async {
     debugDefaultTargetPlatformOverride = null;
@@ -48,6 +49,18 @@ void main() {
     source.dispose();
   });
 
+  test('rejects a native controller whose external image stream is already active', () async {
+    controller.value = controller.value.copyWith(isStreamingImages: true);
+    final errors = <Object>[];
+    final source = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: errors.add);
+
+    await source.start();
+
+    expect(errors.single, isA<StateError>().having((error) => error.message, 'message', contains('exclusive frame-stream ownership')));
+    expect(platform.listens, isEmpty);
+    source.dispose();
+  });
+
   test('an unsupported image format group stops the source with one error', () async {
     final frames = <YuvCameraFrame>[];
     final errors = <Object>[];
@@ -58,6 +71,29 @@ void main() {
     await Future<void>.delayed(Duration.zero);
     expect(frames, isEmpty);
     expect(errors.single, isUnsupportedError);
+    expect(platform.isStreaming(controller.cameraId), isFalse);
+    source.dispose();
+  });
+
+  test('two-plane iOS yuv420 publishes NV12 metadata and rejects malformed frames once', () async {
+    final frames = <YuvCameraFrame>[];
+    final errors = <Object>[];
+    final source = YuvCameraFrameSource(controller, onFrame: frames.add, onError: errors.add);
+    await source.start();
+    platform.emit(controller.cameraId, _nv12Frame());
+    await Future<void>.delayed(Duration.zero);
+    expect(frames.single.format, YuvPixelFormat.nv12);
+    expect(frames.single.image.format, frames.single.format);
+    expect(frames.single.image.uPlane.pixelStride, 2);
+    expect(frames.single.image.toBgraBytes().take(4), [0, 1, 255, 255]);
+
+    await source.start();
+    platform.emit(controller.cameraId, _nv12Frame(truncateUv: true));
+    platform.emit(controller.cameraId, _nv12Frame(truncateUv: true));
+    await Future<void>.delayed(Duration.zero);
+    expect(frames, hasLength(1));
+    expect(errors, hasLength(1));
+    expect(errors.single, isA<FormatException>());
     expect(platform.isStreaming(controller.cameraId), isFalse);
     source.dispose();
   });
@@ -371,4 +407,23 @@ void main() {
     throwing.dispose();
     receiving.dispose();
   });
+}
+
+CameraImageData _nv12Frame({bool truncateUv = false}) {
+  final uv = Uint8List.fromList([90, 240, 54, 34, 0xee, 90, 240, 54, 34]);
+  return CameraImageData(
+    format: const CameraImageFormat(ImageFormatGroup.yuv420, raw: 875704438),
+    width: 3,
+    height: 3,
+    planes: [
+      CameraImagePlane(
+        bytes: Uint8List.fromList([82, 82, 82, 0xee, 82, 82, 82, 0xee, 82, 82, 82]),
+        bytesPerRow: 4,
+        bytesPerPixel: null,
+        width: 3,
+        height: 3,
+      ),
+      CameraImagePlane(bytes: truncateUv ? Uint8List.fromList(uv.take(7).toList()) : uv, bytesPerRow: 5, bytesPerPixel: null, width: 2, height: 2),
+    ],
+  );
 }

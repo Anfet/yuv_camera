@@ -26,7 +26,7 @@ class YuvCameraFrame {
   /// Height in pixels of the raw [image].
   final int height;
 
-  /// Pixel format of the raw [image].
+  /// Pixel format of the raw [image]: native two-plane `yuv420` is NV12, three-plane `yuv420` is I420, and BGRA stays packed.
   final YuvPixelFormat format;
 
   /// How the raw [image] must be rotated and mirrored to appear upright.

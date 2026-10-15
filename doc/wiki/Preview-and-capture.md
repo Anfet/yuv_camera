@@ -41,6 +41,11 @@ if you pass a different `CameraController` to an existing `YuvCameraView`, it st
 | `onFrame`, `onFrameInterval` | Your frame callback and its minimum interval (200 ms by default). See [Frame processing](https://github.com/Anfet/yuv_camera/wiki/Frame-processing). |
 | `overlayBuilder` | Builds a widget over the preview from the geometry of the displayed frame. See [Geometry and overlays](https://github.com/Anfet/yuv_camera/wiki/Geometry-and-overlays). |
 | `onStreamStopped` | Called only after a stream error stops the stream; not on removal or controller replacement. |
+
+On native platforms the YUV source owns the controller's image stream. Do not call `startImageStream`, start video
+recording with an `onAvailable` callback, or subscribe directly to platform frames while it is active. If the controller
+is owned by `YuvCameraOrchestrator`, a terminal stream/controller failure releases the active leases and disposes the
+controller after cancellation completes; its `YuvCameraLeaseBuilder` displays Retry and obtains a fresh controller.
 | `onFramePresented` | Called for every frame that was confirmed as drawn; its argument says whether the shader path is in use. |
 
 ## Capture what is on screen

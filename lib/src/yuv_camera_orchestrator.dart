@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
+import 'package:yuv_camera/src/camera_stream_lifecycle.dart';
 
 /// Lifecycle state of the camera owned by a [YuvCameraOrchestrator].
 enum YuvCameraState {
@@ -27,6 +28,9 @@ enum YuvCameraState {
 ///
 /// The orchestrator does not observe the app lifecycle. YuvCameraLeaseBuilder releases its lease while the app is
 /// hidden; the app must release manually acquired leases itself when it goes to the background.
+///
+/// A terminal controller or frame-source error invalidates active leases, drains frame subscriptions before disposal,
+/// and leaves the orchestrator closed with [error] set. A later [acquire] opens a fresh controller.
 ///
 /// Listeners are notified asynchronously in a microtask when [state] or [error] changes. Getters change immediately;
 /// one notification can cover several transitions in the same turn. No notifications are delivered after [dispose].
@@ -148,6 +152,14 @@ class YuvCameraOrchestrator extends ChangeNotifier {
       final description = cameras.firstWhere((camera) => camera.lensDirection == lensDirection, orElse: () => cameras.first);
       controller = CameraController(description, resolution, enableAudio: false, fps: fps);
       await controller.initialize();
+      final activeController = controller;
+      void listener() => _controllerChanged(activeController);
+      activeController.addListener(listener);
+      _controllerListeners[activeController] = listener;
+      void lifecycleListener(Object error) => _terminalController(activeController, error);
+      final lifecycle = CameraStreamLifecycle.forController(activeController);
+      lifecycle.addErrorListener(lifecycleListener);
+      _lifecycleListeners[activeController] = lifecycleListener;
     } catch (error) {
       if (controller != null) await _disposeController(controller);
       _transition = null;
@@ -176,12 +188,32 @@ class YuvCameraOrchestrator extends ChangeNotifier {
 
   Future<void> _disposeController(CameraController controller) async {
     try {
+      final listener = _controllerListeners.remove(controller);
+      if (listener != null) controller.removeListener(listener);
+      final lifecycle = CameraStreamLifecycle.forController(controller);
+      final lifecycleListener = _lifecycleListeners.remove(controller);
+      if (lifecycleListener != null) lifecycle.removeErrorListener(lifecycleListener);
+      await lifecycle.close();
       await controller.dispose();
     } catch (error, stack) {
       FlutterError.reportError(
         FlutterErrorDetails(exception: error, stack: stack, library: 'yuv_camera', context: ErrorDescription('disposing a camera controller')),
       );
     }
+  }
+
+  void _controllerChanged(CameraController controller) {
+    if (!identical(_controller, controller) || !controller.value.hasError) return;
+    final error = StateError(controller.value.errorDescription ?? 'The camera controller reported an error.');
+    // Let frame-source listeners report the terminal failure to their consumers first.
+    scheduleMicrotask(() => _terminalController(controller, error));
+  }
+
+  void _terminalController(CameraController controller, Object error) {
+    if (!identical(_controller, controller)) return;
+    _error = error;
+    _leases.clear();
+    _close(controller).ignore();
   }
 
   Future<void> _closeAfterTransition() async {
@@ -227,6 +259,8 @@ class YuvCameraOrchestrator extends ChangeNotifier {
   bool _isDisposed = false;
   bool _notificationScheduled = false;
   final Set<YuvCameraLease> _leases = {};
+  final Map<CameraController, VoidCallback> _controllerListeners = {};
+  final Map<CameraController, void Function(Object error)> _lifecycleListeners = {};
 }
 
 /// A claim on the camera of a [YuvCameraOrchestrator], returned by [YuvCameraOrchestrator.acquire].

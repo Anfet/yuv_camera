@@ -55,7 +55,12 @@ Requirements: Dart `^3.12.0`, Flutter `>=3.44.0`. `yuv_camera` requires
 On Android, iOS and desktop, create the `CameraController` with the plugin's
 default `imageFormatGroup`, or `ImageFormatGroup.yuv420` or
 `ImageFormatGroup.bgra8888`. Another group, such as `ImageFormatGroup.nv21`,
-stops the frame stream with an `UnsupportedError` on the first frame.
+stops the frame stream with an `UnsupportedError` on the first frame. Native
+`yuv420` frames with two planes are imported as NV12 (`Y`, interleaved `UV`);
+three planes are imported as I420 (`Y`, `U`, `V`). One-plane BGRA remains
+packed. Plane row strides and layouts are preserved, and malformed layouts
+stop the stream through `onError`. YUV conversion uses BT.601 limited/video
+range as defined by `yuv_ffi`; BGRA has no YUV range conversion.
 
 The plugins' own documentation is the primary source for permission details:
 [`camera`](https://pub.dev/packages/camera) and
@@ -140,6 +145,11 @@ What the example does:
 - `capture()` returns the next frame that is actually drawn, cropped to what is
   visible, or `null` if the view is not attached or stops before drawing. A
   stream ending unexpectedly is reported as a stream error and stops the view.
+- A `YuvCameraOrchestrator` treats a controller error or frame-stream failure as terminal: active leases are invalidated,
+  the controller is drained and disposed, and `YuvCameraLeaseBuilder` shows Retry. Retry opens a fresh controller.
+- A native controller's image stream is exclusively owned while a YUV source is active. Do not call
+  `startImageStream`, `startVideoRecording(onAvailable: ...)`, or subscribe directly to platform frames on that controller.
+  An already active image stream is rejected; later external starts cannot be intercepted reliably.
 - You can still use your own `CameraController` with `YuvCameraView`; see [Main actions](#main-actions).
 
 ## Main actions
@@ -252,7 +262,7 @@ against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
 - The Web camera source smoke target in Chrome (JavaScript build) with a physical webcam on Windows.
 - The Web device-choice target in Chrome (JavaScript build) on a fake media stream with two distinct fake video inputs.
   It is the only fake-stream result and claims no physical camera.
-- The iOS 18.6 simulator fixture targets (capture, shape crop, BGRA) without a camera.
+- The iOS 18.6 simulator fixture targets (capture, shape crop and BGRA) without a camera. The two-plane NV12 fixture target is prepared; physical iPhone NV12 capture remains pending CHECK 9.
 - An iPhone 11 on iOS 18.7.8: the orchestrator, camera-flow and BGRA integration targets, and a signed Release device
   check (portrait idle and heavy load, landscape, face portrait and landscape, mirror, capture). The operator also
   confirmed two previews with the second continuing after the first is removed, and landscape capture in Shape crop.

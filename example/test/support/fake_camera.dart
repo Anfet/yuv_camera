@@ -110,6 +110,8 @@ class FakeCameraPlatform extends CameraPlatform {
 
   void emitError(int cameraId, Object error) => _activeStreams[cameraId]?.addError(error);
 
+  void emitCameraError(int cameraId, String description) => _events.add(CameraErrorEvent(cameraId, description));
+
   Future<void> endStream(int cameraId) async {
     await _activeStreams[cameraId]?.close();
   }

@@ -5,6 +5,7 @@ import 'package:camera/camera.dart';
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/foundation.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
+import 'package:yuv_camera/src/camera_image_layout.dart';
 import 'package:yuv_camera/src/camera_image_import.dart';
 import 'package:yuv_camera/src/camera_orientation.dart';
 import 'package:yuv_camera/src/yuv_camera_frame.dart';
@@ -32,6 +33,13 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
       _fail(StateError('CameraController should be initialized'), generation);
       return;
     }
+    if (controller.value.isStreamingImages) {
+      _fail(
+        StateError('CameraController already has an active image stream. YuvCameraFrameSource requires exclusive frame-stream ownership.'),
+        generation,
+      );
+      return;
+    }
     _clock
       ..reset()
       ..start();
@@ -50,13 +58,20 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
 
   void _deliver(CameraImage image, int generation) {
     if (_disposed || generation != _generation) return;
-    final group = image.format.group;
-    if (group != ImageFormatGroup.yuv420 && group != ImageFormatGroup.bgra8888) {
-      _fail(UnsupportedError('Unsupported camera image format: $group. Use ImageFormatGroup.yuv420 or ImageFormatGroup.bgra8888.'), generation);
+    late final YuvPixelFormat format;
+    try {
+      format = validateCameraImageLayout(image);
+    } on FormatException catch (error) {
+      final group = image.format.group;
+      _fail(
+        group == ImageFormatGroup.yuv420 || group == ImageFormatGroup.bgra8888
+            ? error
+            : UnsupportedError('Unsupported camera image format: $group. Use ImageFormatGroup.yuv420 or ImageFormatGroup.bgra8888.'),
+        generation,
+      );
       return;
     }
     final platform = _platform();
-    final format = group == ImageFormatGroup.bgra8888 ? YuvPixelFormat.bgra8888 : YuvPixelFormat.i420;
     final orientation = cameraFrameOrientation(
       platform: platform,
       lensDirection: controller.description.lensDirection,
@@ -88,8 +103,17 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     final subscription = _subscription;
     _subscription = null;
     if (subscription != null) {
-      _previousStop = subscription.cancel().catchError((Object error) => debugPrint('YuvCameraFrameSource stop error: $error'));
+      _previousStop = subscription.cancel().catchError((Object error, StackTrace stack) {
+        FlutterError.reportError(
+          FlutterErrorDetails(exception: error, stack: stack, library: 'yuv_camera', context: ErrorDescription('stopping a camera frame stream')),
+        );
+      });
     }
+  }
+
+  Future<void> stopAndWait() async {
+    stop();
+    await _previousStop;
   }
 
   @override

@@ -120,6 +120,76 @@ void main() {
     expect(find.textContaining('Camera unavailable:'), findsNothing);
   });
 
+  testWidgets('terminal frame failure drains cancellation before disposal and Retry opens a new camera', (tester) async {
+    final orchestrator = YuvCameraOrchestrator();
+    final viewController = YuvCameraViewController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: YuvCameraLeaseBuilder(
+          orchestrator: orchestrator,
+          builder: (context, controller) => Row(
+            children: [
+              Expanded(
+                child: YuvCameraView(cameraController: controller, viewController: viewController),
+              ),
+              Expanded(child: YuvCameraView(cameraController: controller)),
+            ],
+          ),
+        ),
+      ),
+    );
+    await settle(tester);
+    await settle(tester);
+    platform.stopGate = Completer<void>();
+
+    platform.emitError(1, StateError('frame stream failed'));
+    await settle(tester);
+
+    expect(orchestrator.state, YuvCameraState.closing);
+    expect(platform.disposedCameras, isEmpty);
+    expect(platform.createdCameras, 1);
+    platform.stopGate!.complete();
+    await settle(tester);
+
+    expect(orchestrator.state, YuvCameraState.closed);
+    expect(platform.disposedCameras, [1]);
+    expect(find.textContaining('frame stream failed'), findsOneWidget);
+    await tester.tap(find.text('Retry'));
+    await settle(tester);
+    expect(orchestrator.state, YuvCameraState.open);
+    expect(platform.createdCameras, 2);
+    expect(platform.isStreaming(2), isTrue);
+    final capture = viewController.capture();
+    YuvImage? captured;
+    capture.then((image) => captured = image);
+    platform.emit(2, cameraFrame(63));
+    await pumpUntil(tester, () => captured != null, reason: 'capture from the replacement camera');
+    expect(shadeOfYuv(captured!), 63);
+    viewController.dispose();
+  });
+
+  testWidgets('controller CameraErrorEvent removes the leases and allows retry after disposal', (tester) async {
+    final orchestrator = YuvCameraOrchestrator();
+    await pumpView(tester, orchestrator);
+    await settle(tester);
+    platform.disposeGate = Completer<void>();
+
+    platform.emitCameraError(1, 'camera disconnected');
+    await settle(tester);
+
+    expect(orchestrator.state, YuvCameraState.closing);
+    expect(platform.disposedCameras, [1]);
+    expect(platform.createdCameras, 1);
+    platform.disposeGate!.complete();
+    await settle(tester);
+    expect(find.textContaining('camera disconnected'), findsOneWidget);
+    await tester.tap(find.text('Retry'));
+    await settle(tester);
+
+    expect(orchestrator.state, YuvCameraState.open);
+    expect(platform.createdCameras, 2);
+  });
+
   testWidgets('custom retry clears the error and ignores repeated or already leased requests', (tester) async {
     final orchestrator = YuvCameraOrchestrator();
     platform.failNextInitialize = CameraException('initFailed', 'Initialization failed.');

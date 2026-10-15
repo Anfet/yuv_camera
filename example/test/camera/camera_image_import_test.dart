@@ -7,19 +7,52 @@ import 'package:yuv_ffi/yuv_ffi.dart';
 import 'package:yuv_camera/src/camera_image_import.dart';
 
 void main() {
-  test('preserves pixel-stride-2 chroma planes', () {
-    final image = _cameraImage(ImageFormatGroup.yuv420, 4, 4, [_plane(4, 4, 1, 16), _plane(4, 2, 2, 8), _plane(4, 2, 2, 8)]);
-    final imported = importCameraImage(image);
+  setUpAll(YuvFfi.initialize);
+
+  test('imports a padded two-plane iOS NV12 image with odd dimensions and null pixel strides', () {
+    final cameraImage = _nv12CameraImage();
+
+    final imported = importCameraImage(cameraImage);
+    expect(imported.format, YuvPixelFormat.nv12);
+    expect(imported.yPlane.rowStride, 4);
+    expect(imported.yPlane.pixelStride, 1);
+    expect(imported.uPlane.rowStride, 5);
     expect(imported.uPlane.pixelStride, 2);
-    expect(imported.planes.map((plane) => plane.rowStride), [4, 4, 4]);
-    expect(imported.uPlane.bytes, List<int>.generate(8, (index) => index + 1));
+    expect(imported.uPlane.bytes, [90, 240, 54, 34, 0xee, 90, 240, 54, 34, 0]);
+    expect(imported.toBgraBytes().take(4), [0, 1, 255, 255]);
   });
 
-  test('zero-fills a truncated camera plane', () {
-    final image = _cameraImage(ImageFormatGroup.yuv420, 4, 4, [_plane(4, 4, 1, 14), _plane(4, 2, 2, 7), _plane(4, 2, 2, 8)]);
+  test('preserves pixel-stride-2 chroma planes', () {
+    final image = _cameraImage(ImageFormatGroup.yuv420, 4, 4, [
+      CameraImagePlane(bytes: Uint8List.fromList(List<int>.filled(16, 82)), bytesPerRow: 4, bytesPerPixel: 1, width: 4, height: 4),
+      CameraImagePlane(bytes: Uint8List.fromList([90, 0, 90, 0, 90, 0, 90, 0]), bytesPerRow: 4, bytesPerPixel: 2, width: 2, height: 2),
+      CameraImagePlane(bytes: Uint8List.fromList([240, 0, 240, 0, 240, 0, 240, 0]), bytesPerRow: 4, bytesPerPixel: 2, width: 2, height: 2),
+    ]);
     final imported = importCameraImage(image);
-    expect(imported.yPlane.bytes.sublist(14), [0, 0]);
-    expect(imported.uPlane.bytes.last, 0);
+    expect(imported.format, YuvPixelFormat.i420);
+    expect(imported.uPlane.pixelStride, 2);
+    expect(imported.vPlane.pixelStride, 2);
+    expect(imported.planes.map((plane) => plane.rowStride), [4, 4, 4]);
+    expect(imported.toBgraBytes().take(4), [0, 1, 255, 255]);
+  });
+
+  test('zero-fills only truncated final row padding', () {
+    final image = _cameraImage(ImageFormatGroup.yuv420, 4, 4, [_plane(6, 4, 1, 22), _plane(6, 2, 2, 10), _plane(6, 2, 2, 10)]);
+    final imported = importCameraImage(image);
+    expect(imported.yPlane.bytes.sublist(22), [0, 0]);
+    expect(imported.uPlane.bytes.sublist(10), [0, 0]);
+  });
+
+  test('rejects layouts missing visible samples or with an unsupported plane count', () {
+    final malformed = <CameraImage>[
+      _cameraImage(ImageFormatGroup.yuv420, 4, 4, [_plane(4, 4, 1, 16), _plane(4, 2, 2, 5)]),
+      _cameraImage(ImageFormatGroup.yuv420, 4, 4, [_plane(4, 4, 1, 16), _plane(4, 2, 1, 8)]),
+      _cameraImage(ImageFormatGroup.yuv420, 4, 4, [_plane(4, 4, 1, 16), _plane(4, 2, 2, 8), _plane(4, 2, 2, 8), _plane(4, 2, 1, 8)]),
+      _cameraImage(ImageFormatGroup.yuv420, 4, 4, [_plane(4, 4, 1, 16), _plane(4, 2, 2, 8), _plane(6, 2, 2, 12)]),
+    ];
+    for (final image in malformed) {
+      expect(() => importCameraImage(image), throwsFormatException);
+    }
   });
 
   test('imports padded BGRA without repacking', () {
@@ -28,6 +61,7 @@ void main() {
     expect(imported.format, YuvPixelFormat.bgra8888);
     expect(imported.yPlane.rowStride, 12);
     expect(imported.yPlane.pixelStride, 4);
+    expect(imported.toBgraBytes().take(4), [1, 2, 3, 4]);
   });
 
   test('rejects formats the source never requests', () {
@@ -43,6 +77,24 @@ CameraImage _cameraImage(ImageFormatGroup group, int width, int height, List<Cam
     width: width,
     height: height,
     planes: planes,
+  ),
+);
+
+CameraImage _nv12CameraImage() => CameraImage.fromPlatformInterface(
+  CameraImageData(
+    format: const CameraImageFormat(ImageFormatGroup.yuv420, raw: 875704438),
+    width: 3,
+    height: 3,
+    planes: [
+      CameraImagePlane(
+        bytes: Uint8List.fromList([82, 82, 82, 0xee, 82, 82, 82, 0xee, 82, 82, 82]),
+        bytesPerRow: 4,
+        bytesPerPixel: null,
+        width: 3,
+        height: 3,
+      ),
+      CameraImagePlane(bytes: Uint8List.fromList([90, 240, 54, 34, 0xee, 90, 240, 54, 34]), bytesPerRow: 5, bytesPerPixel: null, width: 2, height: 2),
+    ],
   ),
 );
 

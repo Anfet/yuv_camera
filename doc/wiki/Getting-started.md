@@ -119,6 +119,8 @@ What each part does:
 - `YuvCameraView` needs an initialized `CameraController`. It opens its own frame stream, converts frames into
   `YuvImage`s and draws them through the `yuv_ffi` frame presenter. By default the frame fills the available space and is
   cropped to fit (`fit: YuvFrameFit.cover`).
+- While a native YUV source is active, it owns frame delivery for that controller. Do not also call `startImageStream`,
+  start video recording with `onAvailable`, or subscribe to platform frames directly.
 
 ## Expected result
 

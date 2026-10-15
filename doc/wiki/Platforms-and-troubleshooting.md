@@ -47,6 +47,10 @@ which reports every Windows camera as front. On macOS and Linux the package appl
   instead.
 - Web frames arrive as BGRA and are not rotated. Frames from every camera except a back one are mirrored, as in the
   `camera` plugin's own Web preview; a laptop webcam usually has no facing mode, is reported as external and is mirrored too.
+- Native `yuv420` frames with two planes are NV12 (`Y` + interleaved `UV`); three planes are I420 (`Y`, `U`, `V`).
+  One-plane `bgra8888` remains packed. Native row strides are preserved; malformed visible layouts terminate the stream
+  through `onError`. YUV conversion uses BT.601 limited/video range. The iOS NV12 fixture models plugin bytes only; physical
+  iPhone NV12 capture remains pending CHECK 9.
 
 ## What is verified
 
@@ -96,6 +100,8 @@ set of required checks runs again before each release.
   not initialized. Another message is a failure of the frame stream.
 - Action: pass an initialized controller. After a stream failure open the camera again with a new controller: the source
   that failed has stopped and the view shows the error until it is rebuilt with a new controller.
+  With `YuvCameraOrchestrator`, use `YuvCameraLeaseBuilder`'s Retry action; it drains and disposes the failed controller
+  before opening a replacement. Do not start another native image stream on a controller while a YUV source is active.
 
 ### The preview stutters or freezes while you process frames
 

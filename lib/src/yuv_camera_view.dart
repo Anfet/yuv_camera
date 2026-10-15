@@ -14,9 +14,9 @@ import 'package:yuv_camera/src/yuv_camera_view_controller.dart';
 class YuvCameraView extends StatefulWidget {
   /// Creates a preview for [cameraController], which must be initialized.
   ///
-  /// On native platforms the controller's `imageFormatGroup` must be the plugin default, `ImageFormatGroup.yuv420` or
-  /// `ImageFormatGroup.bgra8888`; another group stops the stream with an [UnsupportedError] on the first frame, and the
-  /// view shows the error.
+  /// Native two-plane `yuv420` frames are imported as NV12, three-plane frames as I420, and one-plane BGRA stays packed.
+  /// Controller errors, stream failures, unsupported formats and malformed layouts stop the stream and reach
+  /// [onStreamStopped].
   const YuvCameraView({
     super.key,
     required this.cameraController,

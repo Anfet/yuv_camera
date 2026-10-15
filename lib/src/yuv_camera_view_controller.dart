@@ -10,6 +10,7 @@ class YuvCameraViewController extends ChangeNotifier {
   ValueListenable<YuvFrameGeometry?> get geometry => _geometry;
 
   /// Returns the next frame that is actually drawn, cropped to what is visible.
+  /// Completes with `null` if the view stops, including when its frame stream fails, before a frame is drawn.
   Future<YuvImage?> capture() => _capture?.call() ?? Future<YuvImage?>.value(null);
 
   void _attach(Future<YuvImage?> Function() capture) => _capture = capture;

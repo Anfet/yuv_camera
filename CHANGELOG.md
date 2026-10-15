@@ -1,6 +1,10 @@
 ## 0.0.1
 
 - Camera capture waits for a painted preview frame and stays pending while the view is offstage.
+* Terminal controller or frame-stream errors now invalidate orchestrator leases and drain frame cancellation before
+  disposal; `YuvCameraLeaseBuilder` can retry with a fresh controller without route navigation.
+* Native YUV frame sources document exclusive image-stream ownership and reject controllers with an already active
+  image stream.
 * Camera frame delivery now uses one shared native stream per controller while each consumer can stop independently;
   unexpected stream EOF is reported as an error and terminates active deliveries.
 * Capture returns the frame actually drawn with the view geometry applied. Frame deliveries and their cached images are
@@ -12,6 +16,9 @@
   `YuvTransformView`. Requires `yuv_ffi: ^0.5.2`; works with `camera` 0.11 and 0.12 (`>=0.11.0+2 <0.13.0`).
 * Native frame sources accept the `yuv420` and `bgra8888` image format groups (the plugin defaults); another group stops
   the stream with an `UnsupportedError`.
+* Native two-plane `yuv420` frames are imported as NV12, three-plane frames as I420, and one-plane BGRA remains packed.
+  Source strides are preserved; incompatible layouts stop the stream with a `FormatException`. YUV conversion uses
+  BT.601 limited/video range. The iOS NV12 fixture is not evidence of physical iPhone capture, which remains a CHECK 9 obligation.
 * Orchestrator: `YuvCameraOrchestrator` leases the single camera through `acquire()` and `YuvCameraLease.release()`,
   closes it after `closeDelay`, keeps at most one controller alive, and reports `YuvCameraState`;
   `YuvCameraLeaseBuilder` passes its initialized controller to a builder, retries after opening failures and releases

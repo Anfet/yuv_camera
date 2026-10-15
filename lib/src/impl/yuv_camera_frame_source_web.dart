@@ -247,6 +247,18 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     _video.srcObject = null;
   }
 
+  Future<void> stopAndWait() async {
+    final reader = _reader;
+    stop();
+    if (reader != null) {
+      try {
+        await reader.cancel().toDart;
+      } catch (_) {
+        // Cancelling an already closed browser reader is an expected teardown race.
+      }
+    }
+  }
+
   @override
   void dispose() {
     if (_disposed) return;

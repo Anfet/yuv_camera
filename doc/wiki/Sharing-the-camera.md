@@ -132,6 +132,15 @@ physical camera, so test it on your target devices.
   stops before the camera closes.
 - The child can be a `YuvCameraView`, a `YuvTransformView` or any widget that uses the `CameraController`.
 
+When a controller or its YUV frame stream fails, the orchestrator invalidates its current leases and waits for frame
+subscription cancellation before disposing the controller. The builder removes the preview and shows Retry; retry opens
+a new controller without requiring route navigation. A manually managed lease owner should likewise reacquire after a
+terminal failure.
+
+While a native YUV source is active, it exclusively owns frame streaming for that controller. Do not also call
+`startImageStream`, start video recording with `onAvailable`, or subscribe to platform frames directly. An already active
+image stream is rejected, but later external starts cannot be intercepted reliably.
+
 ## Without the builder
 
 Call `acquire()` yourself when a non-widget needs the camera, and always release:
