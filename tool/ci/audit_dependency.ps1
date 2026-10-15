@@ -1,7 +1,10 @@
 [CmdletBinding()]
 param(
   [ValidateSet('0.11.0+2', '0.12.1')][string] $CameraVersion = '0.11.0+2',
-  [string] $AndroidDevice
+  [string] $AndroidDevice,
+  [string] $ExpectedCameraSha = $env:YUV_CAMERA_EXPECTED_SHA,
+  [string] $ExpectedFfiSha = $env:YUV_FFI_EXPECTED_SHA,
+  [switch] $PreflightOnly
 )
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
@@ -13,7 +16,9 @@ $cameraSha = (& git -C $root rev-parse HEAD).Trim()
 $ffiPath = (Resolve-Path -LiteralPath (Join-Path $root '..\yuv_ffi')).Path
 $ffiPath = (& git -C $ffiPath rev-parse --show-toplevel).Trim()
 $ffiSha = (& git -C $ffiPath rev-parse HEAD).Trim()
-if ($ffiSha -ne 'b2f03afa2869b103af8cc46f2f050e0805b9c866') { throw "Unexpected exact yuv_ffi SHA: $ffiSha" }
+if ($ExpectedCameraSha -and $cameraSha -ne $ExpectedCameraSha) { throw "Camera SHA mismatch: expected $ExpectedCameraSha, actual $cameraSha" }
+if ($ExpectedFfiSha -and $ffiSha -ne $ExpectedFfiSha) { throw "yuv_ffi SHA mismatch: expected $ExpectedFfiSha, actual $ffiSha" }
+if ($PreflightOnly) { Write-Output "PASS audit_dependency preflight; camera_sha=$cameraSha; yuv_ffi_sha=$ffiSha"; exit 0 }
 $work = Join-Path $root "build\audit-dependency-$CameraVersion-$([guid]::NewGuid().ToString('N'))"
 $log = Join-Path ([IO.Path]::GetTempPath()) "yuv-camera-audit-dependency-$CameraVersion-$([guid]::NewGuid().ToString('N')).log"
 New-Item -ItemType Directory -Path $work | Out-Null

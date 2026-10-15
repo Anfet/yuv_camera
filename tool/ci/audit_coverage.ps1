@@ -1,14 +1,28 @@
 [CmdletBinding()]
-param()
+param(
+  [string] $ChromePath = $env:YUV_CAMERA_CHROME,
+  [string] $ChromeDriverPath = $env:YUV_CAMERA_CHROMEDRIVER,
+  [string] $ExpectedCameraSha = $env:YUV_CAMERA_EXPECTED_SHA,
+  [string] $ExpectedFfiSha = $env:YUV_FFI_EXPECTED_SHA,
+  [switch] $PreflightOnly
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '_common.ps1')
 $root = Get-CameraRepositoryRoot
+$cameraSha = (& git -C $root rev-parse HEAD).Trim()
+$ffiRoot = (& git -C (Join-Path $root '..\yuv_ffi') rev-parse --show-toplevel).Trim()
+$ffiSha = (& git -C $ffiRoot rev-parse HEAD).Trim()
+if ($ExpectedCameraSha -and $cameraSha -ne $ExpectedCameraSha) { throw "Camera SHA mismatch: expected $ExpectedCameraSha, actual $cameraSha" }
+if ($ExpectedFfiSha -and $ffiSha -ne $ExpectedFfiSha) { throw "yuv_ffi SHA mismatch: expected $ExpectedFfiSha, actual $ffiSha" }
+if ($PreflightOnly) { Write-Output "PASS audit_coverage preflight; camera_sha=$cameraSha; yuv_ffi_sha=$ffiSha"; exit 0 }
 $log = Join-Path ([IO.Path]::GetTempPath()) "yuv-camera-audit-coverage-$([guid]::NewGuid().ToString('N')).log"
 Start-Transcript -LiteralPath $log -Force | Out-Null
 try {
-$chrome = 'C:\Program Files\Google\Chrome\Application\chrome.exe'
-$driver = 'D:\.projects\.tools\chromedriver-win64\chromedriver.exe'
+if (-not $ChromePath) { $ChromePath = (Get-Command chrome.exe -ErrorAction SilentlyContinue)?.Source }
+if (-not $ChromeDriverPath) { $ChromeDriverPath = (Get-Command chromedriver.exe -ErrorAction SilentlyContinue)?.Source }
+$chrome = $ChromePath
+$driver = $ChromeDriverPath
 foreach ($path in @($chrome, $driver)) { if (-not (Test-Path -LiteralPath $path -PathType Leaf)) { throw "Required Web executable is missing: $path" } }
 $chromeVersion = (Get-Item -LiteralPath $chrome).VersionInfo.ProductVersion
 $driverOutput = @(& $driver --version 2>&1)
@@ -32,7 +46,7 @@ try {
   foreach ($branch in @('processorUnavailable', 'bgraRejected', 'visibleRectMismatch')) {
     if ([int]$evidence.$branch -lt 1) { throw "Fallback branch '$branch' has no execution evidence." }
   }
-  if ([int]$evidence.frameCloseCount -lt 3 -or [int]$evidence.lateDeliveryCount -ne 0) { throw 'Fallback frame cleanup/delivery evidence is invalid.' }
-  Write-Output "PASS Web fallback harness: processor=$($evidence.processorUnavailable), bgra=$($evidence.bgraRejected), visibleRect=$($evidence.visibleRectMismatch), closed=$($evidence.frameCloseCount), late=$($evidence.lateDeliveryCount); log=$log"
+  if ([int]$evidence.frameCloseCount -lt 3 -or [int]$evidence.lateDeliveryCount -ne 0 -or [int]$evidence.uniqueClosedFrames -ne [int]$evidence.frameCloseCount -or [int]$evidence.exactlyOnceClosedFrames -ne [int]$evidence.frameCloseCount) { throw 'Fallback frame identity/cleanup/delivery evidence is invalid.' }
+  Write-Output "PASS Web fallback harness: target=camera_source_web_fallback_test.dart; processor=$($evidence.processorUnavailable), bgra=$($evidence.bgraRejected), visibleRect=$($evidence.visibleRectMismatch), closed=$($evidence.frameCloseCount), unique=$($evidence.uniqueClosedFrames), late=$($evidence.lateDeliveryCount); Chrome=$chromeVersion; ChromeDriver=$driverVersion; camera_sha=$cameraSha; yuv_ffi_sha=$ffiSha; log=$log"
 } finally { if ($server -and -not $server.HasExited) { Stop-Process -Id $server.Id -Force } }
 } finally { Stop-Transcript | Out-Null }

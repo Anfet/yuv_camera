@@ -93,7 +93,7 @@ if ($applicationBinaryArgument.Count -eq 1 -and [System.IO.Path]::GetFileName(($
         throw "Device logcat stopped before target completion (exit $($logcatProcess.ExitCode))."
       }
       $deviceLog = if (Test-Path -LiteralPath $outputFile) { Get-Content -LiteralPath $outputFile -Raw } else { '' }
-      $appLines = @($deviceLog -split "`r?`n" | Where-Object { $_ -match "I/flutter\s+\($applicationPid\):" })
+      $appLines = @($deviceLog -split "`r?`n" | Where-Object { $_ -match "I/flutter\s+\(\s*$applicationPid\s*\):" })
       if (($appLines -join "`n") -match 'Some tests failed\.?|Failure Details:') {
         Get-Content -LiteralPath $outputFile -Tail 120 | Write-Output
         throw "Release integration target failed on $Device; full device log: $outputFile"

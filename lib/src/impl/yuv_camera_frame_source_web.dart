@@ -17,13 +17,15 @@ import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
 /// Web camera source backed by `MediaStreamTrackProcessor`, with a canvas
 /// fallback for browsers that do not expose it.
 final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
-  YuvCameraFrameSourceImpl(this.controller, {
+  YuvCameraFrameSourceImpl(
+    this.controller, {
     required this.onFrame,
     required this.onError,
     @visibleForTesting this.forceCanvasCallbackForTesting = false,
     @visibleForTesting this.forceVisibleRectMismatchForTesting = false,
     @visibleForTesting this.onBranchForTesting,
     @visibleForTesting this.onVideoFrameClosedForTesting,
+    @visibleForTesting this.onRgbaPixelsForTesting,
   });
 
   final CameraController controller;
@@ -36,7 +38,9 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   @visibleForTesting
   final void Function(String branch)? onBranchForTesting;
   @visibleForTesting
-  final void Function()? onVideoFrameClosedForTesting;
+  final void Function(Object frame)? onVideoFrameClosedForTesting;
+  @visibleForTesting
+  final void Function(Uint8List rgba)? onRgbaPixelsForTesting;
   final Stopwatch _clock = Stopwatch();
   final web.HTMLVideoElement _video = web.HTMLVideoElement()
     ..autoplay = true
@@ -153,7 +157,9 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
       final height = videoFrame.displayHeight;
       if (width <= 0 || height <= 0) return;
       final visibleRect = videoFrame.visibleRect;
-      if (forceVisibleRectMismatchForTesting || videoFrame.format == null || (visibleRect != null && (visibleRect.width != width || visibleRect.height != height))) {
+      if (forceVisibleRectMismatchForTesting ||
+          videoFrame.format == null ||
+          (visibleRect != null && (visibleRect.width != width || visibleRect.height != height))) {
         if (forceVisibleRectMismatchForTesting) onBranchForTesting?.call('visibleRectMismatch');
         // Opaque frames expose no format that copyTo can read; other frames
         // may need display scaling that copyTo does not apply. Canvas renders
@@ -163,18 +169,27 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
           ..height = height;
         final context = _canvas.context2D;
         context.drawImage(videoFrame, 0, 0, width, height);
-        _deliverBgra(width, height, Uint8List.fromList(context.getImageData(0, 0, width, height).data.toDart), false);
+        final rgba = Uint8List.fromList(context.getImageData(0, 0, width, height).data.toDart);
+        onRgbaPixelsForTesting?.call(rgba);
+        _deliverBgra(width, height, rgba, false);
         return;
       }
       final copied = await copyVideoFrameBytesForTesting(
         width: width,
         height: height,
         useBgra: _useBgra,
-        copyBgra: (buffer) async { await videoFrame.copyTo(buffer, _bgraOptions).toDart; },
-        copyRgba: (buffer) async { await videoFrame.copyTo(buffer, _rgbaOptions).toDart; },
+        copyBgra: (buffer) async {
+          await videoFrame.copyTo(buffer, _bgraOptions).toDart;
+        },
+        copyRgba: (buffer) async {
+          await videoFrame.copyTo(buffer, _rgbaOptions).toDart;
+        },
         onRgbaFallback: () => onBranchForTesting?.call('bgraRejected'),
       );
-      if (!copied.isBgra) _useBgra = false;
+      if (!copied.isBgra) {
+        _useBgra = false;
+        onRgbaPixelsForTesting?.call(copied.bytes);
+      }
       if (generation == _generation && !_disposed) _deliverBgra(width, height, copied.bytes, copied.isBgra);
     } finally {
       _processing = false;
@@ -205,7 +220,9 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
         ..height = height;
       final context = _canvas.context2D;
       context.drawImage(_video, 0, 0, width, height);
-      _deliverBgra(width, height, Uint8List.fromList(context.getImageData(0, 0, width, height).data.toDart), false);
+      final rgba = Uint8List.fromList(context.getImageData(0, 0, width, height).data.toDart);
+      onRgbaPixelsForTesting?.call(rgba);
+      _deliverBgra(width, height, rgba, false);
     } catch (error) {
       _fail(error, _generation);
     } finally {
@@ -284,7 +301,7 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
 
   void _closeVideoFrame(web.VideoFrame frame) {
     frame.close();
-    onVideoFrameClosedForTesting?.call();
+    onVideoFrameClosedForTesting?.call(frame);
   }
 
   void _release(web.MediaStream stream) {

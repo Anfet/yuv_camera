@@ -6,9 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
-import 'package:yuv_camera/src/yuv_camera_frame.dart';
-import 'package:yuv_camera/src/yuv_camera_view.dart';
-import 'package:yuv_camera/src/yuv_camera_view_controller.dart';
+import 'package:yuv_camera/yuv_camera.dart';
 
 import '../test/support/fake_camera.dart';
 
@@ -47,6 +45,69 @@ void main() {
     final frame = drawn!;
     final expected = controller.geometry.value!.apply(frame.image);
     expect(image!.toBgraBytes(), orderedEquals(expected.toBgraBytes()));
+  });
+
+  testWidgets('terminal frame error drains before Retry and capture from the replacement camera', (tester) async {
+    await YuvFfi.initialize();
+    final physicalPlatform = CameraPlatform.instance;
+    final platform = FakeCameraPlatform();
+    CameraPlatform.instance = platform;
+    final orchestrator = YuvCameraOrchestrator(closeDelay: Duration.zero);
+    final viewController = YuvCameraViewController();
+    try {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: YuvCameraLeaseBuilder(
+            orchestrator: orchestrator,
+            builder: (context, controller) => Row(
+              mainAxisSize: MainAxisSize.max,
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                Expanded(
+                  child: YuvCameraView(cameraController: controller, viewController: viewController),
+                ),
+                Expanded(child: YuvCameraView(cameraController: controller)),
+              ],
+            ),
+          ),
+        ),
+      );
+      await settleCamera(tester);
+      expect(platform.createdCameras, 1);
+      expect(platform.isStreaming(1), isTrue);
+      final stopGate = platform.stopGate = Completer<void>();
+      platform.emitError(1, StateError('integration frame stream failed'));
+      await settleCamera(tester);
+      expect(orchestrator.state, YuvCameraState.closing);
+      expect(platform.disposedCameras, isEmpty);
+      expect(platform.createdCameras, 1);
+
+      stopGate.complete();
+      await settleCamera(tester);
+      expect(orchestrator.state, YuvCameraState.closed);
+      expect(platform.disposedCameras, [1]);
+      expect(platform.events, containsAllInOrder(['listen:1', 'cancel:1', 'dispose:1']));
+
+      await tester.tap(find.text('Retry'));
+      await settleCamera(tester);
+      expect(orchestrator.state, YuvCameraState.open);
+      expect(platform.createdCameras, 2);
+      expect(platform.isStreaming(2), isTrue);
+      final capture = viewController.capture();
+      YuvImage? captured;
+      capture.then((image) => captured = image);
+      platform.emit(2, cameraFrame(63));
+      await pumpUntil(tester, () => captured != null, reason: 'replacement camera capture');
+      expect(shadeOfYuv(captured ?? (throw StateError('Replacement capture did not complete'))), 63);
+      expect(platform.overlappingStarts, isEmpty);
+    } finally {
+      if (platform.stopGate case final gate? when !gate.isCompleted) gate.complete();
+      await tester.pumpWidget(const SizedBox());
+      await settleCamera(tester);
+      viewController.dispose();
+      await orchestrator.dispose();
+      CameraPlatform.instance = physicalPlatform;
+    }
   });
 }
 
