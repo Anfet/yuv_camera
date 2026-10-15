@@ -73,8 +73,10 @@ against exact commits. So far they have confirmed:
 | iOS observation | The behavior documented on `YuvCameraFrame`: one iPhone, iOS 18.7, front camera, portrait and landscape. |
 
 A build, a passing emulator or a fake-stream target does not prove that a physical camera works on that platform. Other
-platforms, other browsers (including Safari and Firefox), `--wasm` builds, other devices and OS versions are not claimed. The full
-set of required checks runs again before each release.
+platforms, other browsers (including Safari and Firefox), mobile browsers, `--wasm` builds, other devices and OS versions are not claimed.
+The Web evidence is the Windows Chrome JavaScript build served in the default Flutter layout; a custom `assetBase`, a CDN or a
+strict Content-Security-Policy for the `yuv_ffi` WebAssembly module, and static CocoaPods linkage on iOS and macOS (see the
+`yuv_ffi` documentation), have not been verified. The full set of required checks runs again before each release.
 
 ## Troubleshooting
 

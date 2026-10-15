@@ -276,7 +276,10 @@ against exact commits. From the package root of a Git checkout:
 
 A build or a passing emulator or fake-stream target does not prove that a
 physical camera works on that platform. Other platforms, browsers (including
-Safari and Firefox), `--wasm` builds, other devices and OS versions are not claimed.
+Safari and Firefox), mobile browsers, `--wasm` builds, other devices and OS versions are not claimed.
+The Web evidence is the Windows Chrome JavaScript build served in the default Flutter layout; a custom `assetBase`,
+a CDN or a strict Content-Security-Policy for the `yuv_ffi` WebAssembly module, and static CocoaPods linkage on
+iOS and macOS (see the `yuv_ffi` README), have not been verified.
 
 ## Learn more
 
