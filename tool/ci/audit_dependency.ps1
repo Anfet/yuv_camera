@@ -1,6 +1,6 @@
 [CmdletBinding()]
 param(
-  [ValidateSet('0.11.0+2', '0.12.1')][string] $CameraVersion = '0.11.0+2',
+  [ValidateSet('0.12.1')][string] $CameraVersion = '0.12.1',
   [string] $AndroidDevice,
   [string] $ExpectedCameraSha = $env:YUV_CAMERA_EXPECTED_SHA,
   [string] $ExpectedFfiSha = $env:YUV_FFI_EXPECTED_SHA,

@@ -1,7 +1,9 @@
 ## 0.0.1
 
+* Raise the minimum `camera` dependency to 0.12.1 after inconsistent physical Android preview results with 0.11.0+2.
+
 - Camera capture waits for a painted preview frame and stays pending while the view is offstage.
-* The orchestrator handles platform `CameraErrorEvent`s on `camera` 0.11.0+2 and cancels its subscription before disposing the controller.
+* The orchestrator handles platform `CameraErrorEvent`s and cancels its subscription before disposing the controller.
 * Terminal controller or frame-stream errors now invalidate orchestrator leases and drain frame cancellation before
   disposal; `YuvCameraLeaseBuilder` can retry with a fresh controller without route navigation.
 * Native YUV frame sources document exclusive image-stream ownership and reject controllers with an already active
@@ -14,7 +16,7 @@
 
 * First release of `yuv_camera`, extracted from the `yuv_ffi` example camera layer.
 * Public API: `YuvCameraView`, `YuvCameraViewController`, `YuvCameraFrame`, `YuvCameraFrameSource` and
-  `YuvTransformView`. Requires `yuv_ffi: ^0.5.2`; works with `camera` 0.11 and 0.12 (`>=0.11.0+2 <0.13.0`).
+  `YuvTransformView`. Requires `yuv_ffi: ^0.5.2`; works with `camera` 0.12 (`>=0.12.1 <0.13.0`).
 * Native frame sources accept the `yuv420` and `bgra8888` image format groups (the plugin defaults); another group stops
   the stream with an `UnsupportedError`.
 * Native two-plane `yuv420` frames are imported as NV12, three-plane frames as I420, and one-plane BGRA remains packed.

@@ -31,10 +31,10 @@ dependencies:
 
 Requirements: Dart `^3.12.0`, Flutter `>=3.44.0`. `yuv_camera` requires
 `yuv_ffi: ^0.5.2` and declares compatibility with `camera` versions
-`>=0.11.0+2 <0.13.0`. Physical Android preview is verified with `camera`
-0.12.1. Preview with the minimum `camera` 0.11.0+2 / CameraX 0.6.30 is not
-consistently verified; see the [platform verification table](https://github.com/Anfet/yuv_camera/wiki/Platforms-and-troubleshooting#what-is-verified)
-before relying on that combination.
+`>=0.12.1 <0.13.0`. Physical Android preview is verified with `camera`
+0.12.1. The earlier `camera` 0.11.0+2 / CameraX 0.6.30 combination produced
+inconsistent physical preview results and is outside this dependency range; see
+the [platform verification table](https://github.com/Anfet/yuv_camera/wiki/Platforms-and-troubleshooting#what-is-verified).
 
 ### Platform setup
 
