@@ -237,25 +237,31 @@ against exact commits. From the package root: `pwsh -File tool/ci/vm.ps1`,
 - The example VM suite (`flutter test` in `example/`, run by `tool/ci/vm.ps1`, which builds `yuv_ffi.dll` from the
   resolved `yuv_ffi`), covering camera lifecycle, device-check, navigation, image conversion, shape crop, orchestrator
   and face screen behavior. Exact test totals are recorded with each gate run.
-- The native capture integration target with the fake camera platform (it does not use a physical camera) on Windows
-  (Release), on a physical Pixel 3 (Android 12, `arm64-v8a`, debug build), on Linux (Ubuntu 24.04 VM), on macOS 15.6
-  (arm64) and on the iOS 18.6 simulator, where the fixture targets (capture, shape crop, BGRA) also pass without a camera.
-- The shape-crop and orchestrator-cycles integration targets with a physical camera: the built-in webcam on Windows 10
-  (Release); Chrome (JavaScript) with a physical webcam and no fake device; a physical Pixel 3 (Android 12, `arm64-v8a`);
-  a webcam passed through to Ubuntu 24.04 in VirtualBox (not a camera attached directly to the Linux machine); and the
-  built-in camera on macOS 15.6 (arm64), where the cycles also confirmed two previews, the second continuing after the
-  first is removed, and the final close.
-- The Web camera source smoke target in Chrome (JavaScript) with a physical webcam.
-- The Web device-choice target in Chrome (JavaScript) on a fake media stream with two distinct fake video inputs. This is
-  the only fake-stream result; it claims no physical camera.
-- An iPhone 11 on iOS 18.7.8: the integration targets and a Release device check, with two previews, the second
-  continuing after the first is removed, and landscape capture in Shape crop.
+- Example VM suite (`tool/ci/vm.ps1`, `flutter test` in `example/`): camera lifecycle, device-check, navigation, image
+  conversion, shape crop, orchestrator and face-screen behavior.
+- The native capture integration target with the fake camera platform (no physical camera): on Windows (Release), on a
+  physical Pixel 3 (Android 12, `arm64-v8a`, debug build), on Linux (Ubuntu 24.04 in a VirtualBox VM), on macOS 15.6
+  (arm64) and on the iOS 18.6 simulator.
+- The shape-crop and orchestrator-cycles integration targets with a physical camera:
+  - the built-in webcam on Windows 10 (Release);
+  - Chrome (JavaScript build) on Windows with a physical webcam, camera permission auto-approved and no fake device;
+  - a physical Pixel 3 (Android 12, `arm64-v8a`, debug build);
+  - a webcam passed through to an Ubuntu 24.04 VirtualBox guest (not a camera attached directly to the Linux machine);
+  - the built-in camera on macOS 15.6 (arm64), where the orchestrator cycles also confirmed two previews, the second
+    continuing after the first is removed, and the final close.
+- The Web camera source smoke target in Chrome (JavaScript build) with a physical webcam on Windows.
+- The Web device-choice target in Chrome (JavaScript build) on a fake media stream with two distinct fake video inputs.
+  It is the only fake-stream result and claims no physical camera.
+- The iOS 18.6 simulator fixture targets (capture, shape crop, BGRA) without a camera.
+- An iPhone 11 on iOS 18.7.8: the orchestrator, camera-flow and BGRA integration targets, and a signed Release device
+  check (portrait idle and heavy load, landscape, face portrait and landscape, mirror, capture). The operator also
+  confirmed two previews with the second continuing after the first is removed, and landscape capture in Shape crop.
 - The iOS observation in the `YuvCameraFrame` documentation: one iPhone,
   iOS 18.7, front camera, portrait and landscape.
 
 A build or a passing emulator or fake-stream target does not prove that a
 physical camera works on that platform. Other platforms, browsers (including
-Safari and Firefox), `--wasm` builds, and devices are not claimed.
+Safari and Firefox), `--wasm` builds, other devices and OS versions are not claimed.
 
 ## Learn more
 

@@ -33,14 +33,21 @@
   and device-check screens.
 * The package has no GitHub Actions workflows: its checks are the scripts in `tool/ci/`, run directly on the
   maintainer's machines.
-* Verified locally: example VM coverage for camera lifecycle, device-check, navigation, image conversion, shape crop,
-  orchestrator and face-screen behavior; native capture target with the fake camera platform on Windows (Release), a
-  physical Pixel 3 (Android 12, `arm64-v8a`), Linux, macOS and the iOS 18.6 simulator; shape-crop and orchestrator-cycles
-  targets with a physical camera on Windows 10 (Release, built-in webcam), in Chrome (JavaScript, no fake device), on a
-  physical Pixel 3, on Ubuntu 24.04 with a webcam passed through VirtualBox, and on macOS 15.6 (built-in camera); Web camera
-  source smoke with a physical webcam in Chrome (JavaScript); device-choice in Chrome (JavaScript) on a fake stream with
-  two distinct fake video inputs only; iPhone 11 on iOS 18.7.8 for the integration targets and a Release device check.
-  Physical-camera results are limited to the devices and modes listed here.
+* Verified locally, with mode and device named per result: example VM suite (`tool/ci/vm.ps1`) for camera lifecycle,
+  device-check, navigation, image conversion, shape crop, orchestrator and face-screen behavior; native capture target
+  with the fake camera platform on Windows (Release), a physical Pixel 3 (Android 12, `arm64-v8a`, debug), Linux (Ubuntu
+  24.04 VM), macOS 15.6 and the iOS 18.6 simulator; shape-crop and orchestrator-cycles targets with a physical camera on
+  Windows 10 (Release, built-in webcam), in Chrome (JavaScript build) on Windows with a physical webcam and no fake device,
+  on a physical Pixel 3 (debug), on Ubuntu 24.04 with the webcam passed through VirtualBox (not attached directly), and on
+  the macOS 15.6 built-in camera (two previews, the second continuing after the first is removed, final close); Web camera
+  source smoke with a physical webcam in Chrome (JavaScript build) on Windows; Web device-choice target in Chrome
+  (JavaScript build) on a fake media stream with two distinct fake video inputs, the only fake-stream result; iOS 18.6
+  simulator fixture targets for capture, shape crop and BGRA without a camera; iPhone 11 on iOS 18.7.8 for the
+  orchestrator, camera-flow and BGRA integration targets and a signed Release device check (portrait idle and heavy load,
+  landscape, face portrait and landscape, mirror, capture); the `YuvCameraFrame` iOS 18.7 observation. Physical-camera
+  results are limited to the devices and modes listed here; a build, a passing emulator or fake-stream target does not
+  prove a physical camera works, and other platforms, browsers, `--wasm` builds, other devices and OS versions are not
+  claimed.
 * README with package selection, platform setup (permissions, `camera_desktop` on desktop), a complete Quick start,
   ownership rules for frames and captures, and the verified-platform limits. `capture()` may return `null`; Safari,
   Firefox, `--wasm` builds and other devices are not claimed.

@@ -57,17 +57,17 @@ against exact commits. So far they have confirmed:
 | Check | Result |
 | --- | --- |
 | The example's tests | VM coverage includes camera lifecycle, device-check, example navigation, ML Kit input conversion, shape crop, orchestrator and face-screen behavior. Exact test totals are recorded with each gate run. |
-| Native capture integration target | Passed with the fake camera platform, which does not use a physical camera: on Windows (Release), a physical Pixel 3 (Android 12, `arm64-v8a`, debug build), Ubuntu 24.04 in a VM, macOS 15.6 (arm64) and the iOS 18.6 simulator. |
+| Native capture integration target | Passed with the fake camera platform, no physical camera: on Windows (Release), a physical Pixel 3 (Android 12, `arm64-v8a`, debug build), Ubuntu 24.04 in a VM, macOS 15.6 (arm64) and the iOS 18.6 simulator. |
 | iOS 18.6 simulator fixture targets | Capture, shape-crop and BGRA targets pass on fixtures; no camera is involved. |
-| Shape-crop and orchestrator-cycles integration targets | Passed with a physical camera: Windows 10 built-in webcam (Release); Chrome (JavaScript build) with a physical webcam and no fake device; a physical Pixel 3 (Android 12, `arm64-v8a`); a webcam passed through to Ubuntu 24.04 in VirtualBox (not attached directly to the Linux machine); macOS 15.6 (arm64) built-in camera. |
+| Shape-crop and orchestrator-cycles integration targets | Passed with a physical camera: Windows 10 built-in webcam (Release); Chrome (JavaScript build) on Windows with a physical webcam and no fake device; physical Pixel 3 (Android 12, `arm64-v8a`, debug build); a webcam passed through to an Ubuntu 24.04 VirtualBox guest (not attached directly to the Linux machine); macOS 15.6 (arm64) built-in camera. |
 | macOS 15.6 preview check | Passed on the built-in camera: two previews, the second continuing after the first is removed, and final close. |
-| Web camera source smoke | Passed in Chrome (JavaScript build) with a physical webcam. |
-| Web device-choice target | Passed in Chrome (JavaScript build) on a fake media stream with two distinct fake video inputs. This is the only fake-stream result. |
-| iPhone 11, iOS 18.7.8 | Integration targets and Release device check pass: two previews, the second continuing after the first is removed, and landscape capture in Shape crop. |
+| Web camera source smoke | Passed in Chrome (JavaScript build) on Windows with a physical webcam. |
+| Web device-choice target | Passed in Chrome (JavaScript build) on a fake media stream with two distinct fake video inputs. This is the only fake-stream result; no physical camera is claimed. |
+| iPhone 11, iOS 18.7.8 | Orchestrator, camera-flow and BGRA integration targets pass, and the signed Release device check passes (portrait idle and heavy load, landscape, face portrait and landscape, mirror, capture). The operator confirmed two previews, the second continuing after the first is removed, and landscape capture in Shape crop. |
 | iOS observation | The behavior documented on `YuvCameraFrame`: one iPhone, iOS 18.7, front camera, portrait and landscape. |
 
 A build, a passing emulator or a fake-stream target does not prove that a physical camera works on that platform. Other
-platforms, other browsers (including Safari and Firefox), `--wasm` builds and other devices are not claimed. The full
+platforms, other browsers (including Safari and Firefox), `--wasm` builds, other devices and OS versions are not claimed. The full
 set of required checks runs again before each release.
 
 ## Troubleshooting
