@@ -110,6 +110,7 @@ void main() {
         expect(rawFrame!.format.group, ImageFormatGroup.yuv420);
         expect(rawFrame!.planes, hasLength(2));
         await controller.stopImageStream();
+        debugPrint('[ios_yuv420] $requestedLens: stream stopped');
 
         await tester.pumpWidget(
           MaterialApp(
@@ -131,15 +132,26 @@ void main() {
             ),
           ),
         );
+        debugPrint('[ios_yuv420] $requestedLens: preview pumped');
         await _waitFor(tester, () => frameCount > 0 && presentedCount > 0);
+        debugPrint('[ios_yuv420] $requestedLens: frames presented');
         expect(frameFormats, contains(YuvPixelFormat.nv12));
-        final previewCapture = await viewController.capture();
+        // The capture completes on the next presented frame: keep pumping frames while waiting.
+        var captureDone = false;
+        final captureFuture = viewController.capture().whenComplete(
+          () => captureDone = true,
+        );
+        await _waitFor(tester, () => captureDone);
+        final previewCapture = await captureFuture;
+        debugPrint('[ios_yuv420] $requestedLens: captured');
         expect(previewCapture, isNotNull);
         expect(previewCapture!.format, YuvPixelFormat.nv12);
       } finally {
+        debugPrint('[ios_yuv420] $requestedLens: cleanup');
         await tester.pumpWidget(const SizedBox());
         viewController.dispose();
         await controller.dispose();
+        debugPrint('[ios_yuv420] $requestedLens: disposed');
       }
     },
     skip: !runIosCamera,
