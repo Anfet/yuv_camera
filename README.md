@@ -269,7 +269,7 @@ against exact commits. From the package root of a Git checkout:
 - The Web camera source smoke target in Chrome (JavaScript build) with a physical webcam on Windows.
 - The Web device-choice target in Chrome (JavaScript build) on a fake media stream with two distinct fake video inputs.
   It is the only fake-stream result and claims no physical camera.
-- The iOS 18.6 simulator fixture targets (capture, shape crop and BGRA) without a camera. The two-plane NV12 fixture target is prepared; physical iPhone NV12 capture has not been verified.
+- The iOS 18.6 simulator fixture targets (capture, shape crop and BGRA) without a camera. The two-plane NV12 fixture target models plugin bytes only. On an iPhone 11 (iOS 18.7.8) the physical NV12 integration target passed for the front and back cameras: raw frames, drawn preview and capture. Portrait, landscape and mirror modes were not exercised separately for NV12.
 - An iPhone 11 on iOS 18.7.8: the orchestrator, camera-flow and BGRA integration targets, and a signed Release device
   check (portrait idle and heavy load, landscape, face portrait and landscape, mirror, capture). The operator also
   confirmed two previews with the second continuing after the first is removed, and landscape capture in Shape crop.

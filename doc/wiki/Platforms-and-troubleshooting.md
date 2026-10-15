@@ -50,7 +50,7 @@ which reports every Windows camera as front. On macOS and Linux the package appl
 - Native `yuv420` frames with two planes are NV12 (`Y` + interleaved `UV`); three planes are I420 (`Y`, `U`, `V`).
   One-plane `bgra8888` remains packed. Native row strides are preserved; malformed visible layouts terminate the stream
   through `onError`. YUV conversion uses BT.601 limited/video range; the package does not detect full-range data or select
-  another color matrix. The iOS NV12 fixture models plugin bytes only; physical iPhone NV12 capture has not been verified.
+  another color matrix. The iOS NV12 fixture models plugin bytes only; physical NV12 capture (raw frames, drawn preview and capture, front and back cameras) was verified on an iPhone 11 with iOS 18.7.8, without separate portrait, landscape or mirror NV12 runs.
 
 ## What is verified
 

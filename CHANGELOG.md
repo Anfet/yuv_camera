@@ -19,7 +19,7 @@
   the stream with an `UnsupportedError`.
 * Native two-plane `yuv420` frames are imported as NV12, three-plane frames as I420, and one-plane BGRA remains packed.
   Source strides are preserved; incompatible layouts stop the stream with a `FormatException`. YUV conversion uses
-  BT.601 limited/video range; full-range data and other color matrices are not detected. The iOS NV12 fixture is not evidence of physical iPhone capture, which has not been verified.
+  BT.601 limited/video range; full-range data and other color matrices are not detected. The iOS NV12 fixture models plugin bytes only; physical NV12 capture (raw frames, drawn preview and capture, front and back cameras) was verified on an iPhone 11 with iOS 18.7.8, without separate portrait, landscape or mirror NV12 runs.
 * Orchestrator: `YuvCameraOrchestrator` leases the single camera through `acquire()` and `YuvCameraLease.release()`,
   closes it after `closeDelay`, keeps at most one controller alive, and reports `YuvCameraState`;
   `YuvCameraLeaseBuilder` passes its initialized controller to a builder, retries after opening failures and releases
