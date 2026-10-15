@@ -1,5 +1,7 @@
 # yuv_camera — принятые задачи
 
+- **FIX 16 / FIX 21** — DONE (ACCEPTED, Stage 1 Review 1, R35, 15.10.2026). Reviewed camera `41d2f70bd552cf20fa437f3f3be114549a5c525d` from R35 base `2faef104b38f7f4a565e16951423c150c53eaf9f`; FFI `b2f03afa2869b103af8cc46f2f050e0805b9c866`; group `8bc93ee00b92399dc19239fed0dcf0ea2dd113b3`. FIX 16 NV12 import/shared metadata, padded odd fixture and malformed terminal layouts accepted from 24 targeted cases and final R35 union. FIX 21 matching/foreign/duplicate/late platform errors and cancel-before-dispose accepted from targeted 23 tests and exact-minimum clean-consumer 142 VM tests, unchanged dependency/API. Blocking findings for these cards: none. FIX 17 and CHECK 8 remain unaccepted; exact-minimum physical preview FAIL is retained in CHECK 8, not evidence against the narrower FIX 21 VM contract. Physical iPhone NV12/Apple/Linux remain PENDING CHECK 9 / D-56. Reviewer checks: none. Fixed by Reviewer: restored onFramePresented row inside wiki Preview-and-capture parameter table (text-only). Recommendation: DOC 6 should update README's claim that device choice is the only fake-stream result. Full per-card Review in group `doc/release-0.5.2-validation.md`; cards/Reports in group Git history. No runtime reruns for completion/wiki text.
+
 Одна строка на завершённую задачу пакета. Карточки и вердикты удалённых карточек доступны в истории group checkout `D:\.projects\yuv`.
 
 ## 15.10.2026
