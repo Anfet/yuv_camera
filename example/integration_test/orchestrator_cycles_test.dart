@@ -57,6 +57,7 @@ void main() {
             isTrue,
             reason: 'cycle $cycle: controller after acquire',
           );
+          await _settle(tester);
           lease.release();
           await _waitFor(
             tester,
@@ -97,6 +98,7 @@ void main() {
               const Duration(seconds: 30),
               'round $round: the first presenter notification',
             );
+            await _settle(tester);
             drawn = 0;
             final watch = Stopwatch()..start();
             while (watch.elapsed < const Duration(seconds: 3)) {
@@ -184,6 +186,7 @@ void main() {
         final sharedController = orchestrator.controller;
         expect(identical(firstController, sharedController), isTrue);
 
+        await _settle(tester);
         firstPresented = 0;
         secondPresented = 0;
         var watch = Stopwatch()..start();
@@ -279,4 +282,13 @@ Future<void> _waitFor(
     isTrue,
     reason: 'timed out after ${limit.inSeconds} s waiting for $what',
   );
+}
+
+/// Lets the camera settle after it opens: right after initialization a real
+/// device shows flicker and distorted frames.
+Future<void> _settle(WidgetTester tester) async {
+  final watch = Stopwatch()..start();
+  while (watch.elapsed < const Duration(milliseconds: 1500)) {
+    await tester.pump(const Duration(milliseconds: 50));
+  }
 }
