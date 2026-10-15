@@ -295,6 +295,37 @@ void main() {
     second.dispose();
   });
 
+  test('controller-value errors stop the stream, ignore late frames, and detach the listener when idle', () async {
+    final frames = <int>[];
+    final errors = <Object>[];
+    final source = YuvCameraFrameSource(controller, onFrame: (frame) => frames.add(frame.image.toBgraBytes()[0]), onError: errors.add);
+    await source.start();
+    final stopGate = platform.stopGate = Completer<void>();
+
+    controller.value = controller.value.copyWith(errorDescription: 'controller-value failure');
+    expect(errors, hasLength(1));
+    expect(platform.cancels, [controller.cameraId]);
+
+    platform.emit(controller.cameraId, cameraFrame(41));
+    controller.value = controller.value.copyWith(errorDescription: 'recovered');
+    await Future<void>.delayed(Duration.zero);
+    expect(frames, isEmpty);
+    expect(errors, hasLength(1));
+    expect(platform.isStreaming(controller.cameraId), isFalse);
+
+    stopGate.complete();
+    await source.start();
+    platform.emit(controller.cameraId, cameraFrame(42));
+    await Future<void>.delayed(Duration.zero);
+    expect(frames, [42]);
+    source.stop();
+
+    controller.value = controller.value.copyWith(errorDescription: 'inactive controller error');
+    expect(errors, hasLength(1), reason: 'the controller listener is detached when there is no active consumer');
+    controller.value = controller.value.copyWith(errorDescription: 'recovered');
+    source.dispose();
+  });
+
   test('terminal error skips a recipient disposed by an earlier error callback', () async {
     final firstErrors = <Object>[];
     final secondErrors = <Object>[];

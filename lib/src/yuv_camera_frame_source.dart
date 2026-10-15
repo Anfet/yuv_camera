@@ -49,7 +49,6 @@ final class _CameraFrameSourceHub {
   _CameraFrameSourceHub(this._controller) {
     _backend = impl.YuvCameraFrameSourceImpl(_controller, onFrame: _deliver, onError: _fail);
     _lifecycle.registerDrain(_drain);
-    _controller.addListener(_controllerChanged);
   }
 
   final CameraController _controller;
@@ -77,6 +76,7 @@ final class _CameraFrameSourceHub {
     consumer._begin();
     if (wasIdle || _terminal) {
       _terminal = false;
+      _controller.addListener(_controllerChanged);
       final generation = ++_generation;
       final previousOpening = _opening;
       final opening = _opening = () async {
@@ -99,6 +99,7 @@ final class _CameraFrameSourceHub {
     consumer._end();
     if (!_consumers.any((item) => item._running)) {
       _generation++;
+      _controller.removeListener(_controllerChanged);
       _backend.stop();
     }
   }
@@ -138,8 +139,10 @@ final class _CameraFrameSourceHub {
   void _fail(Object error) {
     if (_terminal) return;
     _terminal = true;
+    _controller.removeListener(_controllerChanged);
     _lifecycle.reportError(error);
     _generation++;
+    _backend.stop();
     final recipients = [
       for (final consumer in _consumers)
         if (consumer._running) (consumer, consumer._deliveryGeneration),
