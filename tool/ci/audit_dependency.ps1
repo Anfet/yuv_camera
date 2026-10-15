@@ -1,5 +1,8 @@
 [CmdletBinding()]
-param([ValidateSet('0.11.0+2', '0.12.1')][string] $CameraVersion = '0.11.0+2')
+param(
+  [ValidateSet('0.11.0+2', '0.12.1')][string] $CameraVersion = '0.11.0+2',
+  [string] $AndroidDevice
+)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot '_common.ps1')
@@ -11,10 +14,10 @@ $ffiPath = (Resolve-Path -LiteralPath (Join-Path $root '..\yuv_ffi')).Path
 $ffiPath = (& git -C $ffiPath rev-parse --show-toplevel).Trim()
 $ffiSha = (& git -C $ffiPath rev-parse HEAD).Trim()
 if ($ffiSha -ne 'b2f03afa2869b103af8cc46f2f050e0805b9c866') { throw "Unexpected exact yuv_ffi SHA: $ffiSha" }
-$work = Join-Path ([IO.Path]::GetTempPath()) "yuv-camera-audit-dependency-$CameraVersion-$([guid]::NewGuid().ToString('N'))"
+$work = Join-Path $root "build\audit-dependency-$CameraVersion-$([guid]::NewGuid().ToString('N'))"
 $log = Join-Path ([IO.Path]::GetTempPath()) "yuv-camera-audit-dependency-$CameraVersion-$([guid]::NewGuid().ToString('N')).log"
 New-Item -ItemType Directory -Path $work | Out-Null
-$copyDirectories = @('lib', 'tool/ci', 'example/lib', 'example/test')
+$copyDirectories = @('lib', 'android', 'tool/ci', 'example/lib', 'example/test', 'example/integration_test', 'example/android')
 $copyFiles = @('pubspec.yaml', 'analysis_options.yaml', 'example/pubspec.yaml', 'example/analysis_options.yaml')
 foreach ($relative in $copyDirectories) {
   $source = Join-Path $root $relative
@@ -62,9 +65,29 @@ try {
     "$plugin=$($Matches[1])"
   }
   $status = if ($vmExitCode -eq 0) { 'PASS' } else { 'FAIL' }
-  $summary = "$status audit_dependency camera=$CameraVersion; analyze=PASS (--no-fatal-infos); VM exit=$vmExitCode; resolved=$($pluginVersions -join ', '); camera_sha=$cameraSha; yuv_ffi_sha=$ffiSha; work=$work; log=$log"
+  $androidStatus = 'NOT_REQUESTED'
+  $androidFailure = $null
+  if ($AndroidDevice) {
+    $previousSerial = $env:ANDROID_SERIAL
+    try {
+      $env:ANDROID_SERIAL = $AndroidDevice
+      & pwsh -NoProfile -File (Join-Path $work 'tool/ci/android.ps1') -BuildMode Release -TargetName orchestrator_cycles_test.dart *>> $log
+      if ($LASTEXITCODE -eq 0) { $androidStatus = 'PASS' }
+      else {
+        $androidStatus = "FAIL(exit=$LASTEXITCODE)"
+        $androidFailure = "Exact-minimum Android Release target failed ($LASTEXITCODE)."
+        $status = 'FAIL'
+      }
+    } catch {
+      $androidStatus = 'FAIL'
+      $androidFailure = $_.Exception.Message
+      $status = 'FAIL'
+    } finally { $env:ANDROID_SERIAL = $previousSerial }
+  }
+  $summary = "$status audit_dependency camera=$CameraVersion; analyze=PASS (--no-fatal-infos); VM exit=$vmExitCode; Android Release cycles=$androidStatus; resolved=$($pluginVersions -join ', '); camera_sha=$cameraSha; yuv_ffi_sha=$ffiSha; work=$work; log=$log"
   Add-Content -LiteralPath $log -Value $summary
   Get-Content -LiteralPath $log -Tail 16
   Write-Output $summary
   if ($vmExitCode -ne 0) { throw "Exact camera dependency VM suite failed ($vmExitCode). See $log" }
+  if ($androidFailure) { throw "$androidFailure See $log" }
 } finally { Pop-Location }

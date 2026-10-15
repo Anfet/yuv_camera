@@ -1,6 +1,7 @@
 [CmdletBinding()]
 param(
-  [ValidateSet('Debug', 'Release')][string] $BuildMode = 'Debug'
+  [ValidateSet('Debug', 'Release')][string] $BuildMode = 'Debug',
+  [ValidateSet('all', 'camera_capture_native_test.dart', 'orchestrator_cycles_test.dart', 'shape_crop_test.dart')][string] $TargetName = 'all'
 )
 
 Set-StrictMode -Version Latest
@@ -57,6 +58,9 @@ $targets = @(
   'integration_test/orchestrator_cycles_test.dart',
   'integration_test/shape_crop_test.dart'
 )
+if ($TargetName -ne 'all') {
+  $targets = @("integration_test/$TargetName")
+}
 $buildModeArgument = "--$($BuildMode.ToLowerInvariant())"
 $apk = "build/app/outputs/flutter-apk/app-$($BuildMode.ToLowerInvariant()).apk"
 
