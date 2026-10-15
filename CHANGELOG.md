@@ -44,11 +44,12 @@
   included in the pub.dev archive), run directly on the maintainer's machines.
 * Verified locally, with mode and device named per result: example VM suite (`tool/ci/vm.ps1`) for camera lifecycle,
   device-check, navigation, image conversion, shape crop, orchestrator and face-screen behavior; native capture target
-  with the fake camera platform on Windows (Release), a physical Pixel 3 (Android 12, `arm64-v8a`, debug), Linux (Ubuntu
-  24.04 VM), macOS 15.6 and the iOS 18.6 simulator; shape-crop and orchestrator-cycles targets with a physical camera on
+  with the fake camera platform on Windows (Release), a physical Pixel 3 (Android 12, `arm64-v8a`, debug and Release), Linux
+  (Ubuntu 24.04 VM), macOS 15.6 and the iOS 18.6 simulator; orchestrator-cycles target with a physical camera on
   Windows 10 (Release, built-in webcam), in Chrome (JavaScript build) on Windows with a physical webcam and no fake device,
   on a physical Pixel 3 (Release), on Ubuntu 24.04 with the webcam passed through VirtualBox (not attached directly), and on
-  the macOS 15.6 built-in camera (two previews, the second continuing after the first is removed, final close); Web camera
+  the macOS 15.6 built-in camera (two previews, the second continuing after the first is removed, final close);
+  shape-crop target, which needs no camera, on the real backend of the same platforms, devices and modes; Web camera
   source smoke with a physical webcam in Chrome (JavaScript build) on Windows; Web device-choice target in Chrome
   (JavaScript build) on a fake media stream with two distinct fake video inputs, the only fake-stream result; iOS 18.6
   simulator fixture targets for capture, shape crop and BGRA without a camera; iPhone 11 on iOS 18.7.8 for the

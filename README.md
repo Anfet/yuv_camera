@@ -255,15 +255,17 @@ against exact commits. From the package root of a Git checkout:
   resolved `yuv_ffi`), covering camera lifecycle, device-check, navigation, image conversion, shape crop, orchestrator
   and face screen behavior. Exact test totals are recorded with each gate run.
 - The native capture integration target with the fake camera platform (no physical camera): on Windows (Release), on a
-  physical Pixel 3 (Android 12, `arm64-v8a`, debug build), on Linux (Ubuntu 24.04 in a VirtualBox VM), on macOS 15.6
-  (arm64) and on the iOS 18.6 simulator.
-- The shape-crop and orchestrator-cycles integration targets with a physical camera:
+  physical Pixel 3 (Android 12, `arm64-v8a`, debug and Release builds), on Linux (Ubuntu 24.04 in a VirtualBox VM), on
+  macOS 15.6 (arm64) and on the iOS 18.6 simulator.
+- The orchestrator-cycles integration target with a physical camera:
   - the built-in webcam on Windows 10 (Release);
   - Chrome (JavaScript build) on Windows with a physical webcam, camera permission auto-approved and no fake device;
   - a physical Pixel 3 (Android 12, `arm64-v8a`, Release build);
   - a webcam passed through to an Ubuntu 24.04 VirtualBox guest (not a camera attached directly to the Linux machine);
   - the built-in camera on macOS 15.6 (arm64), where the orchestrator cycles also confirmed two previews, the second
     continuing after the first is removed, and the final close.
+- The shape-crop integration target, which needs no camera and runs on the real YUV backend of the platform, on the same
+  platforms, devices and modes as the orchestrator-cycles target above.
 - The Web camera source smoke target in Chrome (JavaScript build) with a physical webcam on Windows.
 - The Web device-choice target in Chrome (JavaScript build) on a fake media stream with two distinct fake video inputs.
   It is the only fake-stream result and claims no physical camera.

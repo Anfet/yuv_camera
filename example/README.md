@@ -33,19 +33,22 @@ archive; see "Platforms and limits" in the package README); there is no hosted C
 
 - `tool/ci/vm.ps1`: the example VM suite for camera lifecycle, device-check, navigation, image conversion, shape crop,
   orchestrator and face-screen behavior.
-- `tool/ci/windows.ps1` (release build): the native capture target with the fake camera platform, and the shape-crop and
-  orchestrator-cycles targets with the Windows 10 built-in webcam.
+- `tool/ci/windows.ps1` (release build): the native capture target with the fake camera platform, the orchestrator-cycles
+  target with the Windows 10 built-in webcam, and the shape-crop target, which needs no camera.
 - `tool/ci/android.ps1` on a physical Pixel 3 (Android 12, `arm64-v8a`): the native capture target with the
-  fake camera platform (debug build), and the orchestrator-cycles and shape-crop targets (Release build).
+  fake camera platform (debug and Release builds), and the orchestrator-cycles and shape-crop targets (Release build; the
+  shape-crop target needs no camera).
 - `tool/ci/linux.sh` on Ubuntu 24.04 in a VirtualBox VM: the native capture target with the fake camera platform; the
-  shape-crop and orchestrator-cycles targets with the webcam passed through to the guest (not attached directly).
+  orchestrator-cycles target with the webcam passed through to the guest (not attached directly), and the shape-crop
+  target, which needs no camera.
 - macOS 15.6 (arm64), native capture target with the fake camera platform (no physical camera): `tool/ci/macos.sh`
   in the Mac GUI run runs `camera_capture_native_test.dart`, which uses the fake platform.
-- macOS 15.6 (arm64) built-in camera: the Mac GUI run's shape crop and orchestrator cycles, with two previews, the
-  second continuing after the first is removed, and final close.
+- macOS 15.6 (arm64) built-in camera: the Mac GUI run's orchestrator cycles, with two previews, the
+  second continuing after the first is removed, and final close; its shape-crop target needs no camera.
 - `tool/ci/ios.sh` on the iOS 18.6 simulator: capture, shape-crop and BGRA fixture targets, no camera.
-- Chrome (JavaScript build) on Windows with a physical webcam: the Web camera source smoke, shape-crop and
-  orchestrator-cycles targets, run through `tool/ci/drive.ps1` with the `web-server` target and no fake device.
+- Chrome (JavaScript build) on Windows with a physical webcam: the Web camera source smoke and orchestrator-cycles
+  targets, run through `tool/ci/drive.ps1` with the `web-server` target and no fake device; the shape-crop target runs
+  there without a camera.
 - Chrome (JavaScript build) on a fake media stream: the device-choice target with two distinct fake video inputs, the
   only fake-stream result (`tool/ci/web.ps1`).
 - An iPhone 11 on iOS 18.7.8: the orchestrator, camera-flow and BGRA integration targets, and a signed Release device

@@ -62,9 +62,10 @@ against exact commits. So far they have confirmed:
 | Check | Result |
 | --- | --- |
 | The example's tests | VM coverage includes camera lifecycle, device-check, example navigation, ML Kit input conversion, shape crop, orchestrator and face-screen behavior. Exact test totals are recorded with each gate run. |
-| Native capture integration target | Passed with the fake camera platform, no physical camera: on Windows (Release), a physical Pixel 3 (Android 12, `arm64-v8a`, debug build), Ubuntu 24.04 in a VM, macOS 15.6 (arm64) and the iOS 18.6 simulator. |
+| Native capture integration target | Passed with the fake camera platform, no physical camera: on Windows (Release), a physical Pixel 3 (Android 12, `arm64-v8a`, debug and Release builds), Ubuntu 24.04 in a VM, macOS 15.6 (arm64) and the iOS 18.6 simulator. |
 | iOS 18.6 simulator fixture targets | Capture, shape-crop and BGRA targets pass on fixtures; no camera is involved. |
-| Shape-crop and orchestrator-cycles integration targets | Passed with a physical camera: Windows 10 built-in webcam (Release); Chrome (JavaScript build) on Windows with a physical webcam and no fake device; physical Pixel 3 (Android 12, `arm64-v8a`, Release build) with `camera` 0.12.1; a webcam passed through to an Ubuntu 24.04 VirtualBox guest (not attached directly to the Linux machine); macOS 15.6 (arm64) built-in camera. |
+| Orchestrator-cycles integration target | Passed with a physical camera: Windows 10 built-in webcam (Release); Chrome (JavaScript build) on Windows with a physical webcam and no fake device; physical Pixel 3 (Android 12, `arm64-v8a`, Release build) with `camera` 0.12.1; a webcam passed through to an Ubuntu 24.04 VirtualBox guest (not attached directly to the Linux machine); macOS 15.6 (arm64) built-in camera. |
+| Shape-crop integration target | Passed on the real YUV backend of the platform, without a camera, on the same platforms, devices and modes as the orchestrator-cycles target. |
 | Minimum Android dependency | `camera` 0.11.0+2 / CameraX 0.6.30 produced inconsistent physical Pixel 3 preview results (three failed runs and one passing run) and is outside the package dependency range, now `>=0.12.1 <0.13.0`. Physical Pixel 3 preview is verified with `camera` 0.12.1. |
 | macOS 15.6 preview check | Passed on the built-in camera: two previews, the second continuing after the first is removed, and final close. |
 | Web camera source smoke | Passed in Chrome (JavaScript build) on Windows with a physical webcam. |
@@ -76,7 +77,7 @@ A build, a passing emulator or a fake-stream target does not prove that a physic
 platforms, other browsers (including Safari and Firefox), mobile browsers, `--wasm` builds, other devices and OS versions are not claimed.
 The Web evidence is the Windows Chrome JavaScript build served in the default Flutter layout; a custom `assetBase`, a CDN or a
 strict Content-Security-Policy for the `yuv_ffi` WebAssembly module, and static CocoaPods linkage on iOS and macOS (see the
-`yuv_ffi` documentation), have not been verified. The full set of required checks runs again before each release.
+`yuv_ffi` documentation), have not been verified. Before each release, every listed result is either run again or carried over from an earlier run when the code it covers has not changed.
 
 ## Troubleshooting
 
