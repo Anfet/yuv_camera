@@ -92,7 +92,11 @@ void main() {
       try {
         await controller.initialize();
         expect(controller.value.isInitialized, isTrue);
+        debugPrint('[ios_yuv420] $requestedLens: initialized');
+        // Right after initialization a real device shows flicker and distorted frames.
+        await tester.pump(const Duration(milliseconds: 1500));
         final picture = await controller.takePicture();
+        debugPrint('[ios_yuv420] $requestedLens: still captured');
         expect(
           picture.path,
           isNotEmpty,
@@ -102,6 +106,7 @@ void main() {
         CameraImage? rawFrame;
         await controller.startImageStream((frame) => rawFrame ??= frame);
         await _waitFor(tester, () => rawFrame != null);
+        debugPrint('[ios_yuv420] $requestedLens: raw frame received');
         expect(rawFrame!.format.group, ImageFormatGroup.yuv420);
         expect(rawFrame!.planes, hasLength(2));
         await controller.stopImageStream();
