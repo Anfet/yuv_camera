@@ -38,8 +38,10 @@ README); there is no hosted CI. Each result names its mode and device; exact tes
   fake camera platform, and the orchestrator-cycles and shape-crop targets.
 - `tool/ci/linux.sh` on Ubuntu 24.04 in a VirtualBox VM: the native capture target with the fake camera platform; the
   shape-crop and orchestrator-cycles targets with the webcam passed through to the guest (not attached directly).
-- The macOS 15.6 (arm64) built-in camera: the Mac GUI run, camera capture, shape crop and orchestrator cycles with two
-  previews, the second continuing after the first is removed, and final close.
+- macOS 15.6 (arm64), native capture target with the fake camera platform (no physical camera): `tool/ci/macos.sh`
+  in the Mac GUI run runs `camera_capture_native_test.dart`, which uses the fake platform.
+- macOS 15.6 (arm64) built-in camera: the Mac GUI run's shape crop and orchestrator cycles, with two previews, the
+  second continuing after the first is removed, and final close.
 - `tool/ci/ios.sh` on the iOS 18.6 simulator: capture, shape-crop and BGRA fixture targets, no camera.
 - Chrome (JavaScript build) on Windows with a physical webcam: the Web camera source smoke, shape-crop and
   orchestrator-cycles targets, run through `tool/ci/drive.ps1` with the `web-server` target and no fake device.
