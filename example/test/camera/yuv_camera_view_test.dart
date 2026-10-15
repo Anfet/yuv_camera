@@ -262,6 +262,43 @@ void main() {
     viewController.dispose();
   });
 
+  testWidgets('capture stays pending offstage and completes with the frame painted after restore', (tester) async {
+    final viewController = YuvCameraViewController();
+    final offstage = ValueNotifier(true);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ValueListenableBuilder(
+          valueListenable: offstage,
+          builder: (context, isOffstage, _) => Offstage(
+            offstage: isOffstage,
+            child: YuvCameraView(cameraController: camera, viewController: viewController),
+          ),
+        ),
+      ),
+    );
+    await settleCamera(tester);
+    final capture = viewController.capture();
+    platform.emit(camera.cameraId, cameraFrame(81));
+    await tester.pump();
+    var completed = false;
+    final result = capture.then((value) {
+      completed = true;
+      return value;
+    });
+    await tester.pump();
+    expect(completed, isFalse);
+
+    offstage.value = false;
+    await tester.pump();
+    await pumpUntil(tester, () => completed, reason: 'the restored preview to paint');
+    final image = await result;
+    expect(image, isNotNull);
+    expect(shadeOfYuv(image!), 81);
+    await tester.pumpWidget(const SizedBox());
+    offstage.dispose();
+    viewController.dispose();
+  });
+
   testWidgets('stream error between paint and deferred capture completion completes null once', (tester) async {
     platform.synchronousStreams = true;
     final viewController = YuvCameraViewController();

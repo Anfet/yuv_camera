@@ -117,7 +117,6 @@ class _YuvCameraViewState extends State<YuvCameraView> {
 
   void _onFrame(YuvCameraFrame frame) {
     _dispatchFrameCallback(frame);
-    if (_presenter.isBusy) return;
     try {
       if (_presenter.present(frame.image, orientation: frame.orientation)) {
         _presentedCandidate = frame;

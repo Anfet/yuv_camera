@@ -1,5 +1,6 @@
 ## 0.0.1
 
+- Camera capture waits for a painted preview frame and stays pending while the view is offstage.
 * Camera frame delivery now uses one shared native stream per controller while each consumer can stop independently;
   unexpected stream EOF is reported as an error and terminates active deliveries.
 * Capture returns the frame actually drawn with the view geometry applied. Frame deliveries and their cached images are
