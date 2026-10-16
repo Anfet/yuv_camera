@@ -23,7 +23,7 @@ YuvPixelFormat validateCameraImageLayout(CameraImage image) {
     final rows = bgra || index == 0 ? image.height : chromaRows;
     final width = bgra || index == 0 ? image.width : chromaWidth;
     final pixelStride = bgra
-        ? 4
+        ? source.bytesPerPixel ?? 4
         : nv12 && index == 1
         ? 2
         : source.bytesPerPixel ?? 1;

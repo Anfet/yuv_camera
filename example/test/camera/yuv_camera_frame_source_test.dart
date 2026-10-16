@@ -175,6 +175,31 @@ void main() {
     source.dispose();
   });
 
+  test('malformed BGRA stride reports one terminal error before frame delivery', () async {
+    final frames = <YuvCameraFrame>[];
+    final errors = <Object>[];
+    final source = YuvCameraFrameSource(controller, onFrame: frames.add, onError: errors.add);
+    await source.start();
+    platform.emit(
+      controller.cameraId,
+      CameraImageData(
+        format: const CameraImageFormat(ImageFormatGroup.bgra8888, raw: 'bgra8888'),
+        width: 1,
+        height: 1,
+        planes: [
+          CameraImagePlane(bytes: Uint8List.fromList([1, 2, 3, 4]), bytesPerRow: 4, bytesPerPixel: 3, width: 1, height: 1),
+        ],
+      ),
+    );
+    await Future<void>.delayed(Duration.zero);
+
+    expect(frames, isEmpty);
+    expect(errors, hasLength(1));
+    expect(errors.single, isA<FormatException>());
+    expect(platform.isStreaming(controller.cameraId), isFalse);
+    source.dispose();
+  });
+
   test('Windows front-camera frames are mirrored and not rotated', () async {
     final frames = <YuvCameraFrame>[];
     final source = YuvCameraFrameSource(controller, onFrame: frames.add, onError: (_) {});

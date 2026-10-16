@@ -15,7 +15,7 @@ YuvImage importCameraImage(CameraImage image) {
     final source = image.planes[index];
     final rows = bgra || index == 0 ? image.height : chromaRows;
     final pixelStride = bgra
-        ? 4
+        ? source.bytesPerPixel ?? 4
         : nv12 && index == 1
         ? 2
         : source.bytesPerPixel ?? 1;

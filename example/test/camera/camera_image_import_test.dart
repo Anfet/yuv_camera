@@ -64,6 +64,108 @@ void main() {
     expect(imported.toBgraBytes().take(4), [1, 2, 3, 4]);
   });
 
+  test('preserves BGRA pixel gaps and a short final row', () {
+    final image = _cameraImage(ImageFormatGroup.bgra8888, 2, 2, [
+      CameraImagePlane(
+        bytes: Uint8List.fromList([
+          1,
+          2,
+          3,
+          4,
+          0xee,
+          0xee,
+          0xee,
+          0xee,
+          5,
+          6,
+          7,
+          8,
+          0xee,
+          0xee,
+          0xee,
+          0xee,
+          9,
+          10,
+          11,
+          12,
+          0xee,
+          0xee,
+          0xee,
+          0xee,
+          13,
+          14,
+          15,
+          16,
+        ]),
+        bytesPerRow: 16,
+        bytesPerPixel: 8,
+        width: 2,
+        height: 2,
+      ),
+    ]);
+    final imported = importCameraImage(image);
+
+    expect(imported.yPlane.rowStride, 16);
+    expect(imported.yPlane.pixelStride, 8);
+    expect(imported.yPlane.bytes, [
+      1,
+      2,
+      3,
+      4,
+      0xee,
+      0xee,
+      0xee,
+      0xee,
+      5,
+      6,
+      7,
+      8,
+      0xee,
+      0xee,
+      0xee,
+      0xee,
+      9,
+      10,
+      11,
+      12,
+      0xee,
+      0xee,
+      0xee,
+      0xee,
+      13,
+      14,
+      15,
+      16,
+      0,
+      0,
+      0,
+      0,
+    ]);
+    expect(imported.toBgraBytes(), [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
+  });
+
+  test('defaults a null BGRA pixel stride to four and rejects malformed strides or spans', () {
+    final nullStride = _cameraImage(ImageFormatGroup.bgra8888, 1, 1, [
+      CameraImagePlane(bytes: Uint8List.fromList([1, 2, 3, 4]), bytesPerRow: 4, bytesPerPixel: null, width: 1, height: 1),
+    ]);
+    expect(importCameraImage(nullStride).yPlane.pixelStride, 4);
+
+    for (final pixelStride in [-1, 0, 1, 2, 3]) {
+      final malformed = _cameraImage(ImageFormatGroup.bgra8888, 1, 1, [
+        CameraImagePlane(bytes: Uint8List.fromList([1, 2, 3, 4]), bytesPerRow: 4, bytesPerPixel: pixelStride, width: 1, height: 1),
+      ]);
+      expect(() => importCameraImage(malformed), throwsFormatException);
+    }
+    final shortRow = _cameraImage(ImageFormatGroup.bgra8888, 2, 1, [
+      CameraImagePlane(bytes: Uint8List.fromList(List<int>.filled(12, 0)), bytesPerRow: 11, bytesPerPixel: 8, width: 2, height: 1),
+    ]);
+    final shortBuffer = _cameraImage(ImageFormatGroup.bgra8888, 2, 1, [
+      CameraImagePlane(bytes: Uint8List.fromList(List<int>.filled(11, 0)), bytesPerRow: 12, bytesPerPixel: 8, width: 2, height: 1),
+    ]);
+    expect(() => importCameraImage(shortRow), throwsFormatException);
+    expect(() => importCameraImage(shortBuffer), throwsFormatException);
+  });
+
   test('rejects formats the source never requests', () {
     for (final group in <ImageFormatGroup>[ImageFormatGroup.nv21, ImageFormatGroup.jpeg, ImageFormatGroup.unknown]) {
       expect(() => importCameraImage(_cameraImage(group, 2, 2, [_plane(2, 2, 1, 4)])), throwsFormatException);
