@@ -115,6 +115,31 @@ void main() {
     controller.dispose();
   });
 
+  testWidgets('a controller description change stops the view once and completes a pending capture with null', (tester) async {
+    platform.leaveStreamOpenOnDispose = true;
+    final viewController = YuvCameraViewController();
+    var stopped = 0;
+    final oldCameraId = camera.cameraId;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: YuvCameraView(cameraController: camera, viewController: viewController, onStreamStopped: () => stopped++),
+      ),
+    );
+    await settleCamera(tester);
+    final capture = viewController.capture();
+
+    camera.value = camera.value.copyWith(
+      description: const CameraDescription(name: 'replacement', lensDirection: CameraLensDirection.back, sensorOrientation: 90),
+    );
+    await tester.pump();
+
+    expect(await capture.timeout(const Duration(seconds: 1)), isNull);
+    expect(stopped, 1);
+    expect(platform.cancels, [oldCameraId]);
+    expect(platform.listens, [oldCameraId]);
+    viewController.dispose();
+  });
+
   testWidgets('capture uses the first drawn frame after camera replacement changes resolution', (tester) async {
     final viewController = YuvCameraViewController();
     await pumpView(tester, controller: viewController);

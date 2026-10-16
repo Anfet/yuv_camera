@@ -58,6 +58,8 @@ final class _CameraFrameSourceHub {
   Future<void>? _opening;
   bool _terminal = false;
   int _generation = 0;
+  int? _sourceCameraId;
+  _CameraDescriptionKey? _sourceDescription;
 
   YuvCameraFrameSource createConsumer({required void Function(YuvCameraFrame frame) onFrame, required void Function(Object error) onError}) {
     final consumer = _FrameSourceConsumer(this, onFrame, onError);
@@ -76,12 +78,17 @@ final class _CameraFrameSourceHub {
     consumer._begin();
     if (wasIdle || _terminal) {
       _terminal = false;
+      _sourceCameraId = _controller.cameraId;
+      _sourceDescription = _descriptionKey(_controller.description);
       _controller.addListener(_controllerChanged);
+      _controllerChanged();
       final generation = ++_generation;
       final previousOpening = _opening;
       final opening = _opening = () async {
         await previousOpening;
         if (generation != _generation || !_consumers.any((item) => item._running)) return;
+        _controllerChanged();
+        if (generation != _generation) return;
         await _backend.start();
       }();
       try {
@@ -168,10 +175,22 @@ final class _CameraFrameSourceHub {
   }
 
   void _controllerChanged() {
+    if (_terminal) return;
     if (_controller.value.hasError) {
       _fail(StateError(_controller.value.errorDescription ?? 'The camera controller reported an error.'));
+      return;
+    }
+    if (_sourceCameraId != _controller.cameraId || _sourceDescription != _descriptionKey(_controller.description)) {
+      _fail(StateError('The camera controller source changed while frames were active.'));
     }
   }
+
+  _CameraDescriptionKey _descriptionKey(CameraDescription description) => (
+    name: description.name,
+    lensDirection: description.lensDirection,
+    sensorOrientation: description.sensorOrientation,
+    lensType: description.lensType,
+  );
 
   Future<void> _drain() async {
     _generation++;
@@ -181,6 +200,8 @@ final class _CameraFrameSourceHub {
     await _backend.stopAndWait();
   }
 }
+
+typedef _CameraDescriptionKey = ({String name, CameraLensDirection lensDirection, int sensorOrientation, CameraLensType lensType});
 
 final class _FrameSourceConsumer implements YuvCameraFrameSource {
   _FrameSourceConsumer(this._hub, this._onFrame, this._onError);

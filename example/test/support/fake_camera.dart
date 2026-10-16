@@ -92,6 +92,9 @@ class FakeCameraPlatform extends CameraPlatform {
   /// When set, `dispose` waits for it.
   Completer<void>? disposeGate;
 
+  /// Leaves the platform frame stream open when its camera is disposed.
+  bool leaveStreamOpenOnDispose = false;
+
   /// When set, cancelling a camera-error subscription waits for it.
   Completer<void>? cameraErrorCancelGate;
 
@@ -212,7 +215,7 @@ class FakeCameraPlatform extends CameraPlatform {
     disposedCameras.add(cameraId);
     events.add('dispose:$cameraId');
     await disposeGate?.future;
-    await _activeStreams.remove(cameraId)?.close();
+    if (!leaveStreamOpenOnDispose) await _activeStreams.remove(cameraId)?.close();
   }
 }
 

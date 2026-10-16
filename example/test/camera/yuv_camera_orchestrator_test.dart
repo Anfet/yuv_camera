@@ -223,6 +223,25 @@ void main() {
     newLease.release();
   });
 
+  test('2g.2: a frame source error revokes the orchestrated controller and closes it once', () async {
+    final orchestrator = createOrchestrator();
+    final lease = await orchestrator.acquire();
+    final errors = <Object>[];
+    final source = YuvCameraFrameSource(lease.controller, onFrame: (_) {}, onError: errors.add);
+    await source.start();
+
+    lease.controller.value = lease.controller.value.copyWith(
+      description: const CameraDescription(name: 'changed', lensDirection: CameraLensDirection.back, sensorOrientation: 90),
+    );
+    await untilClosed(orchestrator);
+
+    expect(errors, hasLength(1));
+    expect(() => lease.controller, throwsStateError);
+    expect(platform.disposedCameras, [1]);
+    source.dispose();
+    await orchestrator.dispose();
+  });
+
   test('2h: dispose waits for the opening, closes at once, rejects acquire and stops notifying', () async {
     final orchestrator = createOrchestrator(closeDelay: const Duration(hours: 1));
     final states = recordStates(orchestrator);

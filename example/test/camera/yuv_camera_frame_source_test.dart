@@ -61,6 +61,83 @@ void main() {
     source.dispose();
   });
 
+  test('a controller error recorded before start prevents opening its frame stream', () async {
+    controller.value = controller.value.copyWith(errorDescription: 'camera failed before start');
+    final errors = <Object>[];
+    final source = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: errors.add);
+
+    await source.start();
+
+    expect(errors, hasLength(1));
+    expect(errors.single, isA<StateError>().having((error) => error.message, 'message', 'camera failed before start'));
+    expect(platform.listens, isEmpty);
+    source.dispose();
+
+    final healthy = CameraController(controller.description, ResolutionPreset.medium, enableAudio: false);
+    await healthy.initialize();
+    final healthySource = YuvCameraFrameSource(healthy, onFrame: (_) {}, onError: (error) => throw error);
+    await healthySource.start();
+    expect(platform.listens, [healthy.cameraId]);
+    healthySource.dispose();
+    await healthy.dispose();
+  });
+
+  test('a description change with the same camera id stops every shared consumer once', () async {
+    final firstFrames = <YuvCameraFrame>[];
+    final firstErrors = <Object>[];
+    final secondErrors = <Object>[];
+    final first = YuvCameraFrameSource(controller, onFrame: firstFrames.add, onError: firstErrors.add);
+    final second = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: secondErrors.add);
+    await Future.wait([first.start(), second.start()]);
+
+    controller.value = controller.value.copyWith(
+      description: const CameraDescription(
+        name: 'fake-camera',
+        lensDirection: CameraLensDirection.front,
+        sensorOrientation: 0,
+        lensType: CameraLensType.telephoto,
+      ),
+    );
+    controller.value = controller.value.copyWith(
+      description: const CameraDescription(name: 'replacement', lensDirection: CameraLensDirection.back, sensorOrientation: 90),
+    );
+    controller.value = controller.value.copyWith(
+      description: const CameraDescription(name: 'replacement-again', lensDirection: CameraLensDirection.back, sensorOrientation: 90),
+    );
+    platform.emit(controller.cameraId, cameraFrame(20));
+    await Future<void>.delayed(Duration.zero);
+
+    expect(firstErrors, hasLength(1));
+    expect(secondErrors, hasLength(1));
+    expect(firstErrors.single, isA<StateError>().having((error) => error.message, 'message', contains('source changed')));
+    expect(firstFrames, isEmpty);
+    expect(platform.cancels, [controller.cameraId]);
+    expect(platform.isStreaming(controller.cameraId), isFalse);
+    first.dispose();
+    second.dispose();
+  });
+
+  test('setDescription cancels an old stream even when disposing the camera leaves it open', () async {
+    platform.leaveStreamOpenOnDispose = true;
+    final frames = <YuvCameraFrame>[];
+    final errors = <Object>[];
+    final oldCameraId = controller.cameraId;
+    final source = YuvCameraFrameSource(controller, onFrame: frames.add, onError: errors.add);
+    await source.start();
+
+    await controller.setDescription(const CameraDescription(name: 'replacement', lensDirection: CameraLensDirection.back, sensorOrientation: 90));
+    platform.emit(oldCameraId, cameraFrame(21));
+    await Future<void>.delayed(Duration.zero);
+
+    expect(errors, hasLength(1));
+    expect(frames, isEmpty);
+    expect(platform.disposedCameras, [oldCameraId]);
+    expect(platform.listens, [oldCameraId]);
+    expect(platform.cancels, [oldCameraId]);
+    expect(platform.isStreaming(oldCameraId), isFalse);
+    source.dispose();
+  });
+
   test('an unsupported image format group stops the source with one error', () async {
     final frames = <YuvCameraFrame>[];
     final errors = <Object>[];
@@ -317,11 +394,13 @@ void main() {
     await source.start();
     platform.emit(controller.cameraId, cameraFrame(42));
     await Future<void>.delayed(Duration.zero);
-    expect(frames, [42]);
+    expect(frames, isEmpty);
+    expect(errors, hasLength(2), reason: 'a controller that still has hasError must not reopen a stream');
+    expect(platform.listens, [controller.cameraId]);
     source.stop();
 
     controller.value = controller.value.copyWith(errorDescription: 'inactive controller error');
-    expect(errors, hasLength(1), reason: 'the controller listener is detached when there is no active consumer');
+    expect(errors, hasLength(2), reason: 'the controller listener is detached when there is no active consumer');
     controller.value = controller.value.copyWith(errorDescription: 'recovered');
     source.dispose();
   });

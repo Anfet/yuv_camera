@@ -17,6 +17,9 @@ import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
 /// Web camera source backed by `MediaStreamTrackProcessor`, with a canvas
 /// fallback for browsers that do not expose it.
 final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
+  @visibleForTesting
+  static void Function(web.MediaStreamTrack track)? onTrackStoppedForTesting;
+
   YuvCameraFrameSourceImpl(
     this.controller, {
     required this.onFrame,
@@ -307,6 +310,7 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   void _release(web.MediaStream stream) {
     for (final track in stream.getTracks().toDart) {
       track.stop();
+      onTrackStoppedForTesting?.call(track);
     }
   }
 }

@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:yuv_camera/src/yuv_camera_frame.dart';
 import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
+import 'package:yuv_camera/src/impl/yuv_camera_frame_source_web.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
 
 void main() {
@@ -20,16 +21,31 @@ void main() {
     await controller.initialize();
 
     final frames = <YuvCameraFrame>[];
-    final source = YuvCameraFrameSource(controller, onFrame: frames.add, onError: (error) => throw StateError('$error'));
+    final errors = <Object>[];
+    final stoppedTrackStates = <String>[];
+    YuvCameraFrameSourceImpl.onTrackStoppedForTesting = (track) => stoppedTrackStates.add(track.readyState);
+    addTearDown(() => YuvCameraFrameSourceImpl.onTrackStoppedForTesting = null);
+    final source = YuvCameraFrameSource(controller, onFrame: frames.add, onError: errors.add);
+    final sharedSource = YuvCameraFrameSource(controller, onFrame: (_) {}, onError: errors.add);
     addTearDown(source.dispose);
-    await source.start();
+    addTearDown(sharedSource.dispose);
+    await Future.wait([source.start(), sharedSource.start()]);
     await _waitFor(tester, () => frames.isNotEmpty);
     final frame = frames.last;
     expect(frame.width, greaterThan(0));
     expect(frame.height, greaterThan(0));
     expect(frame.image.toBgraBytes().any((byte) => byte != 0), isTrue);
 
-    source.dispose();
+    controller.value = controller.value.copyWith(
+      description: CameraDescription(
+        name: '${camera.name}-changed',
+        lensDirection: camera.lensDirection,
+        sensorOrientation: camera.sensorOrientation,
+      ),
+    );
+    await tester.pump();
+    expect(errors, hasLength(2));
+    expect(stoppedTrackStates, ['ended']);
     final count = frames.length;
     await tester.pump(const Duration(milliseconds: 250));
     expect(frames, hasLength(count));
