@@ -26,6 +26,12 @@ declares it. Linux builds require GStreamer development libraries; macOS needs `
 camera entitlement (both set here). Web camera access requires Chrome over localhost or HTTPS and browser permission.
 ML Kit face detection runs only on Android and iOS; other platforms skip it. For Android release builds, R8 removes the constructors ML Kit needs to start, so the example keeps them in android/app/proguard-rules.pro; an app using ML Kit needs the same rule.
 
+To run with the Flutter Driver Extension enabled for Dart MCP widget diagnostics, use the dedicated debug entrypoint from this directory:
+
+```sh
+flutter run -d <device-id> --target=test_driver/app.dart
+```
+
 The example checkout does not include a Linux runner. To try the local pair on Linux, archive the committed package
 trees into a temporary directory and generate the runner there. Keep the example under its package: its `path: ..`
 dependency needs that parent directory. From the `yuv_camera` Git checkout, with `yuv_ffi` in the sibling directory:
