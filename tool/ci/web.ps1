@@ -23,6 +23,9 @@ try {
   & (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/camera_source_web_smoke_test.dart' 'web-server' '--browser-name=chrome' '--headless' '--web-browser-flag=--use-fake-device-for-media-stream' '--web-browser-flag=--use-fake-ui-for-media-stream' '--no-pub'
   if ($LASTEXITCODE -ne 0) { throw "Web source smoke failed with exit code $LASTEXITCODE" }
   Write-Output 'PASS Chrome JavaScript camera source smoke.'
+  & (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/camera_source_web_fallback_test.dart' 'web-server' '--browser-name=chrome' '--headless' '--web-browser-flag=--use-fake-device-for-media-stream' '--web-browser-flag=--use-fake-ui-for-media-stream' '--no-pub'
+  if ($LASTEXITCODE -ne 0) { throw "Web source fallback target failed with exit code $LASTEXITCODE" }
+  Write-Output 'PASS Chrome JavaScript camera source format and fallback regression.'
   & (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/shape_crop_test.dart' 'web-server' '--browser-name=chrome' '--headless' '--web-browser-flag=--use-fake-device-for-media-stream' '--web-browser-flag=--use-fake-ui-for-media-stream' '--no-pub'
   if ($LASTEXITCODE -ne 0) { throw "Web shape crop target failed with exit code $LASTEXITCODE" }
   Write-Output 'PASS Chrome shape crop target.'

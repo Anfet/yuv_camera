@@ -10,6 +10,7 @@ import 'package:yuv_ffi/yuv_ffi.dart';
 import 'package:yuv_camera/src/camera_orientation.dart';
 import 'package:yuv_camera/src/frame_read_loop.dart';
 import 'package:yuv_camera/src/stream_start.dart';
+import 'package:yuv_camera/src/web_frame_copy.dart';
 import 'package:yuv_camera/src/web_video_constraints.dart';
 import 'package:yuv_camera/src/yuv_camera_frame.dart';
 import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
@@ -29,6 +30,7 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     @visibleForTesting this.onBranchForTesting,
     @visibleForTesting this.onVideoFrameClosedForTesting,
     @visibleForTesting this.onRgbaPixelsForTesting,
+    @visibleForTesting this.onCopyProbeForTesting,
   });
 
   final CameraController controller;
@@ -44,6 +46,8 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   final void Function(Object frame)? onVideoFrameClosedForTesting;
   @visibleForTesting
   final void Function(Uint8List rgba)? onRgbaPixelsForTesting;
+  @visibleForTesting
+  final void Function()? onCopyProbeForTesting;
   final Stopwatch _clock = Stopwatch();
   final web.HTMLVideoElement _video = web.HTMLVideoElement()
     ..autoplay = true
@@ -58,7 +62,7 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   bool _running = false;
   bool _processing = false;
   bool _disposed = false;
-  bool _useBgra = true;
+  WebFrameCopyMode _copyMode = WebFrameCopyMode.canvas;
   late final web.VideoFrameCopyToOptions _bgraOptions = web.VideoFrameCopyToOptions(format: 'BGRA');
   late final web.VideoFrameCopyToOptions _rgbaOptions = web.VideoFrameCopyToOptions(format: 'RGBA');
 
@@ -104,15 +108,51 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
         _videoTrack?.addEventListener('ended', listener);
         await _video.play().toDart;
       },
-      onStarted: () {
-        _clock
-          ..reset()
-          ..start();
-        _running = true;
-        if (!_startTrackProcessor(generation)) _scheduleNext();
-      },
+      onStarted: () => _startSession(generation).ignore(),
       onError: (error) => _fail(error, generation),
     );
+  }
+
+  Future<void> _startSession(int generation) async {
+    final copyMode = await _probeCopyMode();
+    if (_disposed || generation != _generation) return;
+    _copyMode = copyMode;
+    _clock
+      ..reset()
+      ..start();
+    _running = true;
+    if (!_startTrackProcessor(generation)) _scheduleNext();
+  }
+
+  Future<WebFrameCopyMode> _probeCopyMode() async {
+    web.VideoFrame? probeFrame;
+    try {
+      onCopyProbeForTesting?.call();
+      final probeCanvas = web.HTMLCanvasElement()
+        ..width = 2
+        ..height = 1;
+      final context = probeCanvas.context2D;
+      context
+        ..fillStyle = 'rgb(13, 71, 203)'.toJS
+        ..fillRect(0, 0, 1, 1)
+        ..fillStyle = 'rgb(229, 41, 97)'.toJS
+        ..fillRect(1, 0, 1, 1);
+      final sample = Uint8List.fromList(context.getImageData(0, 0, 2, 1).data.toDart);
+      final frame = web.VideoFrame(probeCanvas, web.VideoFrameInit(timestamp: 0));
+      probeFrame = frame;
+      return await probeWebFrameCopyForTesting(
+        width: 2,
+        height: 1,
+        rgbaSample: sample,
+        copyBgra: (buffer) => frame.copyTo(buffer, _bgraOptions).toDart,
+        copyRgba: (buffer) => frame.copyTo(buffer, _rgbaOptions).toDart,
+      );
+    } catch (_) {
+      // If the browser cannot create or read the sample frame, use canvas for this session.
+      return WebFrameCopyMode.canvas;
+    } finally {
+      if (probeFrame != null) _closeVideoFrame(probeFrame);
+    }
   }
 
   bool _startTrackProcessor(int generation) {
@@ -160,37 +200,42 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
       final height = videoFrame.displayHeight;
       if (width <= 0 || height <= 0) return;
       final visibleRect = videoFrame.visibleRect;
-      if (forceVisibleRectMismatchForTesting ||
+      if (_copyMode == WebFrameCopyMode.canvas ||
+          forceVisibleRectMismatchForTesting ||
           videoFrame.format == null ||
           (visibleRect != null && (visibleRect.width != width || visibleRect.height != height))) {
+        if (_copyMode == WebFrameCopyMode.canvas) onBranchForTesting?.call('copyCanvasFallback');
         if (forceVisibleRectMismatchForTesting) onBranchForTesting?.call('visibleRectMismatch');
         // Opaque frames expose no format that copyTo can read; other frames
         // may need display scaling that copyTo does not apply. Canvas renders
         // both at the same dimensions as the preview.
-        _canvas
-          ..width = width
-          ..height = height;
-        final context = _canvas.context2D;
-        context.drawImage(videoFrame, 0, 0, width, height);
-        final rgba = Uint8List.fromList(context.getImageData(0, 0, width, height).data.toDart);
-        onRgbaPixelsForTesting?.call(rgba);
-        _deliverBgra(width, height, rgba, false);
+        _drawVideoFrame(videoFrame, width: width, height: height);
         return;
       }
-      final copied = await copyVideoFrameBytesForTesting(
-        width: width,
-        height: height,
-        useBgra: _useBgra,
-        copyBgra: (buffer) async {
-          await videoFrame.copyTo(buffer, _bgraOptions).toDart;
-        },
-        copyRgba: (buffer) async {
-          await videoFrame.copyTo(buffer, _rgbaOptions).toDart;
-        },
-        onRgbaFallback: () => onBranchForTesting?.call('bgraRejected'),
-      );
-      if (!copied.isBgra) {
-        _useBgra = false;
+      late final WebFrameCopyResult copied;
+      try {
+        copied = await copyVideoFrameBytesForTesting(
+          width: width,
+          height: height,
+          useBgra: _copyMode == WebFrameCopyMode.bgra,
+          copyBgra: (buffer) => videoFrame.copyTo(buffer, _bgraOptions).toDart,
+          copyRgba: (buffer) => videoFrame.copyTo(buffer, _rgbaOptions).toDart,
+          onRgbaFallback: () {
+            if (_disposed || generation != _generation) return;
+            _copyMode = WebFrameCopyMode.rgba;
+            onBranchForTesting?.call('bgraRejected');
+          },
+        );
+      } catch (_) {
+        // A runtime copy or layout failure is recoverable through the canvas path.
+        if (_disposed || generation != _generation) return;
+        _copyMode = WebFrameCopyMode.canvas;
+        onBranchForTesting?.call('copyCanvasFallback');
+        _drawVideoFrame(videoFrame, width: width, height: height);
+        return;
+      }
+      if (!copied.isBgra && generation == _generation && !_disposed) {
+        _copyMode = WebFrameCopyMode.rgba;
         onRgbaPixelsForTesting?.call(copied.bytes);
       }
       if (generation == _generation && !_disposed) _deliverBgra(width, height, copied.bytes, copied.isBgra);
@@ -198,6 +243,17 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
       _processing = false;
       _closeVideoFrame(videoFrame);
     }
+  }
+
+  void _drawVideoFrame(web.VideoFrame videoFrame, {required int width, required int height}) {
+    _canvas
+      ..width = width
+      ..height = height;
+    final context = _canvas.context2D;
+    context.drawImage(videoFrame, 0, 0, width, height);
+    final rgba = Uint8List.fromList(context.getImageData(0, 0, width, height).data.toDart);
+    onRgbaPixelsForTesting?.call(rgba);
+    _deliverBgra(width, height, rgba, false);
   }
 
   void _scheduleNext() {
@@ -313,29 +369,4 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
       onTrackStoppedForTesting?.call(track);
     }
   }
-}
-
-/// Copies frame bytes and falls back to RGBA when the browser rejects BGRA.
-@visibleForTesting
-Future<({Uint8List bytes, bool isBgra})> copyVideoFrameBytesForTesting({
-  required int width,
-  required int height,
-  required bool useBgra,
-  required Future<void> Function(web.AllowSharedBufferSource buffer) copyBgra,
-  required Future<void> Function(web.AllowSharedBufferSource buffer) copyRgba,
-  void Function()? onRgbaFallback,
-}) async {
-  // dart2wasm copies `Uint8List.toJS`; return the JS array the browser wrote.
-  final buffer = Uint8List(width * height * 4).toJS;
-  var isBgra = useBgra;
-  try {
-    await (isBgra ? copyBgra : copyRgba)(buffer);
-  } catch (_) {
-    // Browsers that reject BGRA can still write RGBA, which is converted on import.
-    if (!isBgra) rethrow;
-    onRgbaFallback?.call();
-    isBgra = false;
-    await copyRgba(buffer);
-  }
-  return (bytes: buffer.toDart, isBgra: isBgra);
 }

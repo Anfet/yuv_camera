@@ -5,7 +5,9 @@ import 'package:camera/camera.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:web/web.dart' as web;
 import 'package:yuv_camera/src/impl/yuv_camera_frame_source_web.dart';
+import 'package:yuv_camera/src/web_frame_copy.dart';
 import 'package:yuv_camera/src/yuv_camera_frame.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
 
@@ -14,6 +16,7 @@ void main() {
 
   testWidgets('Web source fallback paths preserve pixels and stop delivery', (tester) async {
     expect(kIsWeb, isTrue);
+    await _verifyCopyModes();
     await YuvFfi.initialize();
     final cameras = await availableCameras();
     expect(cameras, isNotEmpty, reason: 'Chrome fake-media flags must expose a camera');
@@ -26,6 +29,7 @@ void main() {
     final closedFrames = HashMap<Object, int>.identity();
     var lateDeliveryCount = 0;
     var bgraCopyAttempts = 0;
+    var copyProbeCount = 0;
     final rgbaSample = Uint8List.fromList([255, 0, 0, 255]);
     final copied = await copyVideoFrameBytesForTesting(
       width: 1,
@@ -37,6 +41,7 @@ void main() {
       },
       copyRgba: (buffer) async {
         (buffer as JSUint8Array).toDart.setAll(0, rgbaSample);
+        return <web.PlaneLayout>[web.PlaneLayout(offset: 0, stride: 4)].toJS;
       },
       onRgbaFallback: () => branches.update('bgraRejected', (count) => count + 1, ifAbsent: () => 1),
     );
@@ -69,6 +74,7 @@ void main() {
             frameCloseCount++;
             closedFrames.update(frame, (count) => count + 1, ifAbsent: () => 1);
           },
+          onCopyProbeForTesting: () => copyProbeCount++,
           onRgbaPixelsForTesting: (rgba) => canvasRgba = Uint8List.fromList(rgba),
         );
 
@@ -107,7 +113,8 @@ void main() {
     expect(branches['canvasCallback'], greaterThan(0));
     expect(branches['bgraRejected'], greaterThan(0));
     expect(branches['visibleRectMismatch'], greaterThan(0));
-    expect(frameCloseCount, greaterThanOrEqualTo(3), reason: 'each fallback scenario must close its consumed VideoFrame');
+    expect(copyProbeCount, 3, reason: 'format capability must be checked once for each source session');
+    expect(frameCloseCount, greaterThanOrEqualTo(5), reason: 'each consumed frame and temporary probe frame must close');
     expect(closedFrames, isNotEmpty);
     expect(closedFrames.values.every((count) => count == 1), isTrue, reason: 'each VideoFrame identity must close exactly once');
     expect(closedFrames.length, frameCloseCount);
@@ -121,9 +128,62 @@ void main() {
       'uniqueClosedFrames': closedFrames.length,
       'exactlyOnceClosedFrames': closedFrames.values.where((count) => count == 1).length,
       'lateDeliveryCount': lateDeliveryCount,
+      'copyProbeCount': copyProbeCount,
     };
   }, timeout: const Timeout(Duration(seconds: 90)));
 }
+
+Future<void> _verifyCopyModes() async {
+  final rgba = Uint8List.fromList([13, 71, 203, 255, 229, 41, 97, 255]);
+  final bgra = _rgbaToBgra(rgba);
+  final tight = <web.PlaneLayout>[web.PlaneLayout(offset: 0, stride: 8)].toJS;
+  final planar = <web.PlaneLayout>[web.PlaneLayout(offset: 0, stride: 2), web.PlaneLayout(offset: 2, stride: 2)].toJS;
+
+  expect(
+    await probeWebFrameCopyForTesting(width: 2, height: 1, rgbaSample: rgba, copyBgra: _copyOutput(bgra, tight), copyRgba: _unsupportedCopy),
+    WebFrameCopyMode.bgra,
+    reason: 'valid BGRA bytes and a tight layout select BGRA',
+  );
+  expect(
+    await probeWebFrameCopyForTesting(width: 2, height: 1, rgbaSample: rgba, copyBgra: _unsupportedCopy, copyRgba: _copyOutput(rgba, tight)),
+    WebFrameCopyMode.rgba,
+    reason: 'a rejected BGRA request falls back to verified RGBA',
+  );
+  expect(
+    await probeWebFrameCopyForTesting(
+      width: 2,
+      height: 1,
+      rgbaSample: rgba,
+      copyBgra: _copyOutput(bgra, planar),
+      copyRgba: _copyOutput(rgba, planar),
+    ),
+    WebFrameCopyMode.canvas,
+    reason: 'a planar result cannot be imported by the tight pixel reader',
+  );
+  expect(
+    await probeWebFrameCopyForTesting(width: 2, height: 1, rgbaSample: rgba, copyBgra: _copyOutput(rgba, tight), copyRgba: _copyOutput(rgba, tight)),
+    WebFrameCopyMode.rgba,
+    reason: 'swapped channels in a tight BGRA result are detected by the sample',
+  );
+  expect(
+    await probeWebFrameCopyForTesting(width: 2, height: 1, rgbaSample: rgba, copyBgra: _unsupportedCopy, copyRgba: _unsupportedCopy),
+    WebFrameCopyMode.canvas,
+    reason: 'when both format requests fail, the source uses canvas',
+  );
+  await expectLater(
+    copyVideoFrameBytesForTesting(width: 2, height: 1, useBgra: true, copyBgra: _copyOutput(bgra, planar), copyRgba: _copyOutput(rgba, tight)),
+    throwsFormatException,
+    reason: 'a non-tight real-frame layout must reach canvas, not retry another import format',
+  );
+}
+
+WebFrameCopy _copyOutput(Uint8List bytes, JSArray<web.PlaneLayout> layout) => (buffer) async {
+  (buffer as JSUint8Array).toDart.setAll(0, bytes);
+  return layout;
+};
+
+Future<JSArray<web.PlaneLayout>> _unsupportedCopy(web.AllowSharedBufferSource _) =>
+    Future.error(UnsupportedError('VideoFrame.copyTo format is unsupported'));
 
 Future<void> _waitFor(WidgetTester tester, bool Function() condition, String what) async {
   for (var attempt = 0; attempt < 100 && !condition(); attempt++) {
