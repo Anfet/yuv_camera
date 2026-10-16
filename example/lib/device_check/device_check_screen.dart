@@ -30,18 +30,25 @@ class DeviceCheckScreen extends StatefulWidget {
 class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
   static const String _gitSha = String.fromEnvironment('GIT_SHA', defaultValue: 'unknown');
   static const List<_DeviceCheckStep> _steps = [
-    _DeviceCheckStep('portrait_idle', 'Hold the phone upright with the front camera facing you. Tap Start and hold still.', measures: true),
+    _DeviceCheckStep(
+      'portrait_idle',
+      'Keep the camera in its normal position and facing you. Tap Start and hold still.',
+      measures: true,
+      fixedCameraId: 'preview_idle',
+    ),
     _DeviceCheckStep(
       'portrait_heavy',
-      'Keep the phone upright. Tap Start and hold still while a heavy blur runs in the background.',
+      'Keep the camera in its normal position. Tap Start and hold still while a heavy blur runs in the background.',
       measures: true,
       heavy: true,
+      fixedCameraId: 'preview_heavy',
     ),
     _DeviceCheckStep(
       'landscape',
       'Turn the phone sideways (either direction) and keep your face in the preview. Tap Start and hold still.',
       measures: true,
       question: 'Is the preview upright, with your head at the top of the screen?',
+      requiresDeviceRotation: true,
     ),
     _DeviceCheckStep(
       'face_portrait',
@@ -56,15 +63,16 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
       measures: true,
       face: true,
       question: 'Did the box stay on your face?',
+      requiresDeviceRotation: true,
     ),
     _DeviceCheckStep(
       'mirror',
-      'Keep the phone upright and raise your right hand next to your face. Then tap Next.',
+      'Keep the camera facing you and raise your right hand next to your face. Then tap Next.',
       question: 'Is your raised hand on the right side of the screen, as in a mirror?',
     ),
     _DeviceCheckStep(
       'capture',
-      'Keep the phone upright with your face in the preview and tap Capture. The captured frame appears in the bottom-right corner.',
+      'Keep the camera facing you and tap Capture. The captured frame appears in the bottom-right corner.',
       question: 'Does the captured frame in the corner match the preview: same rotation, same mirror side, same framing?',
       capture: true,
     ),
@@ -95,7 +103,13 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
   Object? _cameraError;
   DeviceCheckStepResult? _pendingResult;
 
-  _DeviceCheckStep get _step => _steps[_stepIndex];
+  late final List<_DeviceCheckStep> _availableSteps = _steps
+      .where((step) => (!step.requiresDeviceRotation || _supportsDeviceRotation) && (!step.face || _supportsFaceDetection))
+      .toList(growable: false);
+
+  _DeviceCheckStep get _step => _availableSteps[_stepIndex];
+
+  String get _stepId => _supportsDeviceRotation ? _step.id : _step.fixedCameraId ?? _step.id;
 
   @override
   void initState() {
@@ -115,7 +129,7 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_results.length == _steps.length) return _buildResult(context);
+    if (_results.length == _availableSteps.length) return _buildResult(context);
     final compact = MediaQuery.orientationOf(context) == Orientation.landscape;
     return Scaffold(
       body: SafeArea(
@@ -136,7 +150,8 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 spacing: compact ? 6 : 12,
                 children: [
-                  Text('Step ${_stepIndex + 1}/${_steps.length}: ${_step.id}', style: Theme.of(context).textTheme.titleSmall),
+                  Text('Step ${_stepIndex + 1}/${_availableSteps.length}: $_stepId', style: Theme.of(context).textTheme.titleSmall),
+                  if (!_supportsDeviceRotation) const Text('Phone-rotation and face-detection checks are omitted on this platform.'),
                   if (_awaitingAnswer && _step.question != null)
                     Text(_step.question!, style: Theme.of(context).textTheme.titleMedium)
                   else
@@ -267,7 +282,7 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
       if (orchestrator == null) throw StateError('The device check needs a camera orchestrator.');
       final lease = await orchestrator.acquire();
       // A lease that arrives after the last step has no preview to serve; the result screen is already shown.
-      if (!mounted || _results.length == _steps.length) {
+      if (!mounted || _results.length == _availableSteps.length) {
         lease.release();
         return;
       }
@@ -296,7 +311,7 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
     Future<void>.delayed(deviceCheckMeasurementDuration, () {
       if (!mounted || !_measuring || measurementId != _measurementId) return;
       final result = _measurement.finish(
-        id: _step.id,
+        id: _stepId,
         blurRuns: _step.heavy ? _blurRuns : null,
         blurDurations: _blurDurations,
         faceRatio: _step.face && _faceFrames > 0 ? _faceFramesWithFace / _faceFrames : null,
@@ -324,7 +339,7 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
   }
 
   void _skip() {
-    final result = DeviceCheckStepResult(id: _step.id, skipped: true, seconds: 0);
+    final result = DeviceCheckStepResult(id: _stepId, skipped: true, seconds: 0);
     _log('Device check step ${jsonEncode(result.toJson())}');
     _advance(result);
   }
@@ -368,7 +383,7 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
     setState(() {
       _awaitingAnswer = false;
       _results.add(result);
-      if (_results.length < _steps.length) {
+      if (_results.length < _availableSteps.length) {
         _stepIndex++;
       } else {
         // The result screen replaces the preview in this frame; the camera goes back once the preview is unmounted.
@@ -376,10 +391,10 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
         WidgetsBinding.instance.addPostFrameCallback((_) => lease?.release());
       }
     });
-    if (_results.length == _steps.length) _log('Device check result ${_report.json}');
+    if (_results.length == _availableSteps.length) _log('Device check result ${_report.json}');
   }
 
-  DeviceCheckStepResult _emptyResult({String? capture}) => DeviceCheckStepResult(id: _step.id, skipped: false, seconds: 0, capture: capture);
+  DeviceCheckStepResult _emptyResult({String? capture}) => DeviceCheckStepResult(id: _stepId, skipped: false, seconds: 0, capture: capture);
 
   void _onFramePresented(bool shader) {
     final camera = _camera;
@@ -419,7 +434,9 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
     if (_step.face && _measuring && _supportsFaceDetection) await _detectFace(frame, measurementId);
   }
 
-  bool get _supportsFaceDetection => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+  bool get _supportsDeviceRotation => !kIsWeb && (defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS);
+
+  bool get _supportsFaceDetection => _supportsDeviceRotation;
 
   Future<void> _detectFace(YuvCameraFrame frame, int measurementId) async {
     final rotation = switch (frame.orientation.rotation) {
@@ -470,6 +487,8 @@ final class _DeviceCheckStep {
     this.face = false,
     this.question,
     this.capture = false,
+    this.requiresDeviceRotation = false,
+    this.fixedCameraId,
   });
 
   final String id;
@@ -479,6 +498,8 @@ final class _DeviceCheckStep {
   final bool face;
   final String? question;
   final bool capture;
+  final bool requiresDeviceRotation;
+  final String? fixedCameraId;
 }
 
 int _rotationDegrees(YuvImageRotation rotation) => switch (rotation) {
