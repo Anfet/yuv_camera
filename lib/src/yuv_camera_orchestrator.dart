@@ -44,7 +44,7 @@ class YuvCameraOrchestrator extends ChangeNotifier {
     this.resolution = ResolutionPreset.medium,
     this.fps,
     this.closeDelay = Duration.zero,
-  });
+  }) : _selectedCamera = null;
 
   /// Preferred direction of the opened camera.
   final CameraLensDirection lensDirection;
@@ -57,6 +57,21 @@ class YuvCameraOrchestrator extends ChangeNotifier {
 
   /// How long the camera stays open after the last lease is released.
   final Duration closeDelay;
+
+  CameraDescription? _selectedCamera;
+
+  /// Camera selected for the next opening, or `null` to use [lensDirection].
+  CameraDescription? get selectedCamera => _selectedCamera;
+
+  /// Selects the exact camera to use on the next opening.
+  ///
+  /// The camera can be changed only while the orchestrator is closed. The description must still be returned by
+  /// [availableCameras] when [acquire] next opens the camera.
+  void selectCamera(CameraDescription camera) {
+    _throwIfDisposed();
+    if (_state != YuvCameraState.closed) throw StateError('Select a camera only while the orchestrator is closed.');
+    _selectedCamera = camera;
+  }
 
   /// Current lifecycle state.
   YuvCameraState get state => _state;
@@ -150,7 +165,16 @@ class YuvCameraOrchestrator extends ChangeNotifier {
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) throw CameraException('noCamera', 'No camera is available.');
-      final description = cameras.firstWhere((camera) => camera.lensDirection == lensDirection, orElse: () => cameras.first);
+      final selectedCamera = _selectedCamera;
+      final description = selectedCamera == null
+          ? cameras.firstWhere((camera) => camera.lensDirection == lensDirection, orElse: () => cameras.first)
+          : cameras.firstWhere(
+              (camera) =>
+                  camera.name == selectedCamera.name &&
+                  camera.lensDirection == selectedCamera.lensDirection &&
+                  camera.sensorOrientation == selectedCamera.sensorOrientation,
+              orElse: () => throw CameraException('noCamera', 'The selected camera is no longer available.'),
+            );
       controller = CameraController(description, resolution, enableAudio: false, fps: fps);
       await controller.initialize();
       if (controller.value.hasError) {
