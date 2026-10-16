@@ -10,9 +10,10 @@ const _cameraCloseTimeout = Duration(seconds: 30);
 
 /// Opens, closes and reopens the camera of [orchestrator] and shows what the orchestrator reports.
 class OrchestratorScreen extends StatefulWidget {
-  const OrchestratorScreen({super.key, required this.orchestrator});
+  const OrchestratorScreen({super.key, required this.orchestrator, this.cameraSettleDelay = _cameraSettleDelay});
 
   final YuvCameraOrchestrator orchestrator;
+  final Duration cameraSettleDelay;
 
   @override
   State<OrchestratorScreen> createState() => _OrchestratorScreenState();
@@ -240,11 +241,11 @@ class _OrchestratorScreenState extends State<OrchestratorScreen> {
     for (var i = 0; i < 10 && mounted; i++) {
       try {
         final lease = await widget.orchestrator.acquire();
-        await Future<void>.delayed(_cameraSettleDelay);
+        await Future<void>.delayed(widget.cameraSettleDelay);
         lease.release();
         await _waitForCameraClosed();
         if (!mounted) return;
-        await Future<void>.delayed(_cameraSettleDelay);
+        await Future<void>.delayed(widget.cameraSettleDelay);
       } catch (error) {
         failed++;
         if (mounted) {
