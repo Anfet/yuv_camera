@@ -1,7 +1,7 @@
 import 'dart:js_interop';
 import 'dart:typed_data';
 
-import 'package:flutter/foundation.dart' show listEquals, visibleForTesting;
+import 'package:flutter/foundation.dart' show listEquals;
 import 'package:web/web.dart' as web;
 
 enum WebFrameCopyMode { bgra, rgba, canvas }
@@ -11,7 +11,6 @@ typedef WebFrameCopy = Future<JSArray<web.PlaneLayout>> Function(web.AllowShared
 typedef WebFrameCopyResult = ({Uint8List bytes, bool isBgra});
 
 /// Checks the browser's copy formats against a known RGBA sample.
-@visibleForTesting
 Future<WebFrameCopyMode> probeWebFrameCopyForTesting({
   required int width,
   required int height,
@@ -32,7 +31,6 @@ Future<WebFrameCopyMode> probeWebFrameCopyForTesting({
 }
 
 /// Copies one frame and rejects layouts the tight BGRA importer cannot read.
-@visibleForTesting
 Future<WebFrameCopyResult> copyVideoFrameBytesForTesting({
   required int width,
   required int height,
