@@ -1,11 +1,14 @@
 import 'package:flutter/foundation.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
 
 /// A handle for observing a [YuvCameraView] and capturing its next drawn frame.
 class YuvCameraViewController extends ChangeNotifier {
-  final ValueNotifier<YuvFrameGeometry?> _geometry = ValueNotifier(null);
+  final _GeometryListenable _geometry = _GeometryListenable();
   Future<YuvImage?> Function()? _capture;
   Future<YuvImage?> Function()? _geometryOwner;
+  YuvFrameGeometry? _notifiedGeometry;
+  bool _geometryNotificationScheduled = false;
   bool _disposed = false;
 
   /// Geometry used for the currently displayed frame.
@@ -37,7 +40,28 @@ class YuvCameraViewController extends ChangeNotifier {
 
   void _setGeometryValue(YuvFrameGeometry? geometry) {
     if (_geometry.value == geometry) return;
-    _geometry.value = geometry;
+    _geometry.setValue(geometry);
+
+    final scheduler = SchedulerBinding.instance;
+    if (scheduler.schedulerPhase == SchedulerPhase.idle || scheduler.schedulerPhase == SchedulerPhase.postFrameCallbacks) {
+      _notifyGeometryChanged();
+      return;
+    }
+
+    if (_geometryNotificationScheduled) return;
+    _geometryNotificationScheduled = true;
+    scheduler.addPostFrameCallback((_) {
+      _geometryNotificationScheduled = false;
+      if (_disposed) return;
+      _notifyGeometryChanged();
+    });
+  }
+
+  void _notifyGeometryChanged() {
+    final geometry = _geometry.value;
+    if (geometry == _notifiedGeometry || _disposed) return;
+    _notifiedGeometry = geometry;
+    _geometry.notifyValueListeners();
     notifyListeners();
   }
 
@@ -49,6 +73,17 @@ class YuvCameraViewController extends ChangeNotifier {
     _geometry.dispose();
     super.dispose();
   }
+}
+
+class _GeometryListenable extends ChangeNotifier implements ValueListenable<YuvFrameGeometry?> {
+  YuvFrameGeometry? _value;
+
+  @override
+  YuvFrameGeometry? get value => _value;
+
+  void setValue(YuvFrameGeometry? value) => _value = value;
+
+  void notifyValueListeners() => notifyListeners();
 }
 
 /// Internal binding used by YuvCameraView; hidden from the package export.

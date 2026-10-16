@@ -546,6 +546,9 @@ void main() {
     platform.emit(camera.cameraId, cameraFrame(40));
     await pumpUntil(tester, () => first.geometry.value != null, reason: 'the initial preview geometry');
     final expected = first.geometry.value;
+    var oldHandleNotifications = 0;
+    void oldHandleListener() => oldHandleNotifications++;
+    first.geometry.addListener(oldHandleListener);
     final rebuildsBeforeSwap = rebuilds;
 
     swapHandle(() => current = replacement);
@@ -553,6 +556,8 @@ void main() {
     await tester.pump();
     expect(tester.takeException(), isNull);
     expect(replacement.geometry.value, expected);
+    expect(first.geometry.value, isNull);
+    expect(oldHandleNotifications, 1, reason: 'a separate listener remains attached to the old handle');
     expect(notifications, 1);
     expect(rebuilds, greaterThan(rebuildsBeforeSwap), reason: 'the consumer setState listener ran on the replacement geometry');
     YuvImage? image;
@@ -566,8 +571,71 @@ void main() {
     await captured;
     expect(image, isNotNull);
     await tester.pumpWidget(const SizedBox());
+    first.geometry.removeListener(oldHandleListener);
     first.dispose();
     replacement.dispose();
+  });
+
+  testWidgets('geometry reset notifications are deferred for camera replacement and preview removal', (tester) async {
+    final viewController = YuvCameraViewController();
+    var currentCamera = camera;
+    var showPreview = true;
+    late StateSetter updateView;
+    var geometryNotifications = 0;
+    var controllerNotifications = 0;
+    var consumerRebuilds = 0;
+    void onControllerChanged() => controllerNotifications++;
+    viewController.geometry.addListener(() => geometryNotifications++);
+    viewController.addListener(onControllerChanged);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: _GeometryConsumer(
+          controller: viewController,
+          onRebuild: () => consumerRebuilds++,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              updateView = setState;
+              return showPreview ? YuvCameraView(cameraController: currentCamera, viewController: viewController) : const SizedBox();
+            },
+          ),
+        ),
+      ),
+    );
+    await settleCamera(tester);
+    platform.emit(camera.cameraId, cameraFrame(40));
+    await pumpUntil(tester, () => viewController.geometry.value != null, reason: 'initial preview geometry');
+
+    final replacement = CameraController(camera.description, ResolutionPreset.medium, enableAudio: false);
+    await replacement.initialize();
+    final notificationsBeforeReplacement = geometryNotifications;
+    final controllerNotificationsBeforeReplacement = controllerNotifications;
+    final rebuildsBeforeReplacement = consumerRebuilds;
+    updateView(() => currentCamera = replacement);
+    await tester.pump();
+    expect(viewController.geometry.value, isNull, reason: 'the value resets immediately');
+    expect(tester.takeException(), isNull, reason: 'the listener notification waits until the current build finishes');
+    expect(geometryNotifications, notificationsBeforeReplacement + 1);
+    expect(controllerNotifications, controllerNotificationsBeforeReplacement + 1);
+    await tester.pump();
+    expect(consumerRebuilds, greaterThan(rebuildsBeforeReplacement));
+
+    platform.emit(replacement.cameraId, cameraFrame(41));
+    await pumpUntil(tester, () => viewController.geometry.value != null, reason: 'replacement preview geometry');
+    final notificationsBeforeRemoval = geometryNotifications;
+    final controllerNotificationsBeforeRemoval = controllerNotifications;
+    updateView(() => showPreview = false);
+    await tester.pump();
+    expect(viewController.geometry.value, isNull, reason: 'unmount resets the value immediately');
+    expect(tester.takeException(), isNull, reason: 'the mounted ancestor listener is notified after unmount');
+    expect(geometryNotifications, notificationsBeforeRemoval + 1);
+    expect(controllerNotifications, controllerNotificationsBeforeRemoval + 1);
+    expect(await viewController.capture(), isNull, reason: 'capture detaches immediately');
+
+    await tester.pumpWidget(const SizedBox());
+    viewController.removeListener(onControllerChanged);
+    viewController.dispose();
+    await replacement.dispose();
   });
 
   testWidgets('replacing the view controller together with the camera controller does not hand over stale geometry', (tester) async {

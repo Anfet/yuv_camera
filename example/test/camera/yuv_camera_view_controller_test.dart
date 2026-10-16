@@ -4,6 +4,8 @@ import 'package:yuv_ffi/yuv_ffi.dart';
 import 'package:yuv_camera/src/yuv_camera_view_controller.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+
   test('detaching an old view does not clear the newer owner geometry', () {
     final controller = YuvCameraViewController();
     Future<YuvImage?> first() async => null;
@@ -34,5 +36,26 @@ void main() {
 
     expect(await controller.capture(), same(expected));
     controller.dispose();
+  });
+
+  testWidgets('disposing before a deferred geometry notification drops that notification', (tester) async {
+    final controller = YuvCameraViewController();
+    Future<YuvImage?> owner() async => null;
+    final geometry = YuvFrameGeometry(sourceSize: const Size(2, 3), viewSize: const Size(20, 30));
+    var notifications = 0;
+    controller.geometry.addListener(() => notifications++);
+
+    await tester.pumpWidget(
+      Builder(
+        builder: (context) {
+          controller.attach(owner);
+          controller.setGeometry(owner, geometry);
+          controller.dispose();
+          return const SizedBox();
+        },
+      ),
+    );
+
+    expect(notifications, 0);
   });
 }

@@ -1,5 +1,3 @@
-import 'dart:typed_data';
-
 import 'package:camera/camera.dart';
 import 'package:camera_platform_interface/camera_platform_interface.dart';
 import 'package:flutter/foundation.dart';
@@ -52,11 +50,13 @@ void main() {
     platform.emit(camera.cameraId, _asymmetricFrame());
     await pumpUntil(tester, () => transformed != null && displayedGeometry != null, reason: 'the transformed upright frame and geometry');
 
-    final pixels = transformed!.toBgraBytes();
+    final output = transformed ?? (throw StateError('The transformed frame was not delivered.'));
+    final geometry = displayedGeometry ?? (throw StateError('The transformed frame geometry was not delivered.'));
+    final pixels = output.toBgraBytes();
     expect([for (var offset = 0; offset < pixels.length; offset += 4) pixels[offset]], [50, 30, 10, 60, 40, 20]);
-    expect(displayedGeometry!.sourceSize, const Size(3, 2));
-    expect(displayedGeometry!.orientation, YuvFrameOrientation.upright);
-    expect(displayedGeometry!.orientation.rotation, YuvImageRotation.rotation0);
+    expect(geometry.sourceSize, const Size(3, 2));
+    expect(geometry.orientation, YuvFrameOrientation.upright);
+    expect(geometry.orientation.rotation, YuvImageRotation.rotation0);
 
     await tester.pumpWidget(const SizedBox());
     debugDefaultTargetPlatformOverride = null;
