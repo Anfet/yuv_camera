@@ -19,7 +19,11 @@ void main() {
   Future<void> pumpScreen(WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(800, 1000));
     addTearDown(() => tester.binding.setSurfaceSize(null));
-    await tester.pumpWidget(MaterialApp(home: OrchestratorScreen(orchestrator: orchestrator, cameraSettleDelay: Duration.zero)));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: OrchestratorScreen(orchestrator: orchestrator, cameraSettleDelay: Duration.zero),
+      ),
+    );
   }
 
   testWidgets('Open opens the camera and Close closes it', (tester) async {
@@ -41,12 +45,12 @@ void main() {
 
     await tester.tap(find.text('Open/close ×10'));
     await tester.pump();
-    final complete = () => find.textContaining('10 cycles done').evaluate().isNotEmpty;
-    for (int i = 0; i < 400 && !complete(); i++) {
+    bool cyclesComplete() => find.textContaining('10 cycles done').evaluate().isNotEmpty;
+    for (int i = 0; i < 400 && !cyclesComplete(); i++) {
       await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 5)));
       await tester.pump(const Duration(milliseconds: 25));
     }
-    expect(complete(), isTrue, reason: 'timed out waiting for ten cycles');
+    expect(cyclesComplete(), isTrue, reason: 'timed out waiting for ten cycles');
     await settleCamera(tester);
 
     expect(find.textContaining('10 cycles done · 0 errors'), findsOneWidget);
