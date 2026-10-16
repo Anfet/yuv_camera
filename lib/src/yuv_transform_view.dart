@@ -25,6 +25,9 @@ class YuvTransformView extends StatefulWidget {
   final CameraController cameraController;
 
   /// Synchronously produces the image to draw for an accepted frame; it runs on the UI isolate.
+  ///
+  /// The returned image is drawn as supplied; the view does not apply the frame orientation again. Use
+  /// `frame.upright().copy()` before mutating pixels because the frame owns the image returned by `upright()`.
   final YuvImage Function(YuvCameraFrame frame) transform;
 
   /// How the image is fitted into the available space.
@@ -69,6 +72,7 @@ class _YuvTransformViewState extends State<YuvTransformView> {
       _source?.dispose();
       _source = null;
       _presenter.reset();
+      _geometry = null;
       _error = null;
       _start();
     }
@@ -86,6 +90,7 @@ class _YuvTransformViewState extends State<YuvTransformView> {
   }
 
   void _onError(Object error) {
+    _geometry = null;
     if (mounted) setState(() => _error = error);
     widget.onStreamStopped?.call();
   }

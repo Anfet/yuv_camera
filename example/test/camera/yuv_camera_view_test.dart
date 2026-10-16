@@ -126,6 +126,8 @@ void main() {
       ),
     );
     await settleCamera(tester);
+    platform.emit(oldCameraId, cameraFrame(22));
+    await pumpUntil(tester, () => viewController.geometry.value != null, reason: 'geometry before the controller source changes');
     final capture = viewController.capture();
 
     camera.value = camera.value.copyWith(
@@ -134,6 +136,7 @@ void main() {
     await tester.pump();
 
     expect(await capture.timeout(const Duration(seconds: 1)), isNull);
+    expect(viewController.geometry.value, isNull);
     expect(stopped, 1);
     expect(platform.cancels, [oldCameraId]);
     expect(platform.listens, [oldCameraId]);
@@ -143,6 +146,8 @@ void main() {
   testWidgets('capture uses the first drawn frame after camera replacement changes resolution', (tester) async {
     final viewController = YuvCameraViewController();
     await pumpView(tester, controller: viewController);
+    platform.emit(camera.cameraId, cameraFrame(30));
+    await pumpUntil(tester, () => viewController.geometry.value != null, reason: 'geometry before camera replacement');
     final replacement = CameraController(
       const CameraDescription(name: 'replacement', lensDirection: CameraLensDirection.back, sensorOrientation: 0),
       ResolutionPreset.medium,
@@ -155,6 +160,7 @@ void main() {
       ),
     );
     await settleCamera(tester);
+    expect(viewController.geometry.value, isNull);
 
     final capture = viewController.capture();
     var captureDone = false;
@@ -483,6 +489,8 @@ void main() {
     final viewController = YuvCameraViewController();
     await pumpView(tester, controller: viewController);
     await settleCamera(tester);
+    platform.emit(camera.cameraId, cameraFrame(70));
+    await pumpUntil(tester, () => viewController.geometry.value != null, reason: 'geometry before stream EOF');
 
     final firstCapture = viewController.capture();
     final secondCapture = viewController.capture();
@@ -493,6 +501,7 @@ void main() {
     expect(await firstCapture.timeout(const Duration(seconds: 1)), isNull);
     expect(await secondCapture.timeout(const Duration(seconds: 1)), isNull);
     expect(camera.value.isInitialized, isTrue);
+    expect(viewController.geometry.value, isNull);
     expect(find.textContaining('Camera error:'), findsOneWidget);
     expect(await viewController.capture().timeout(const Duration(seconds: 1)), isNull);
 

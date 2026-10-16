@@ -5,6 +5,8 @@ import 'package:yuv_ffi/yuv_ffi.dart';
 class YuvCameraViewController extends ChangeNotifier {
   final ValueNotifier<YuvFrameGeometry?> _geometry = ValueNotifier(null);
   Future<YuvImage?> Function()? _capture;
+  Future<YuvImage?> Function()? _geometryOwner;
+  bool _disposed = false;
 
   /// Geometry used for the currently displayed frame.
   ValueListenable<YuvFrameGeometry?> get geometry => _geometry;
@@ -13,13 +15,27 @@ class YuvCameraViewController extends ChangeNotifier {
   /// Completes with `null` if the view stops, including when its frame stream fails, before a frame is drawn.
   Future<YuvImage?> capture() => _capture?.call() ?? Future<YuvImage?>.value(null);
 
-  void _attach(Future<YuvImage?> Function() capture) => _capture = capture;
-
-  void _detach(Future<YuvImage?> Function() capture) {
-    if (_capture == capture) _capture = null;
+  void _attach(Future<YuvImage?> Function() capture) {
+    if (_disposed) return;
+    _capture = capture;
+    _geometryOwner = capture;
+    _setGeometryValue(null);
   }
 
-  void _setGeometry(YuvFrameGeometry? geometry) {
+  void _detach(Future<YuvImage?> Function() capture) {
+    if (_disposed) return;
+    if (_capture != capture) return;
+    _capture = null;
+    _geometryOwner = null;
+    _setGeometryValue(null);
+  }
+
+  void _setGeometryFor(Future<YuvImage?> Function() owner, YuvFrameGeometry? geometry) {
+    if (_disposed || _geometryOwner != owner) return;
+    _setGeometryValue(geometry);
+  }
+
+  void _setGeometryValue(YuvFrameGeometry? geometry) {
     if (_geometry.value == geometry) return;
     _geometry.value = geometry;
     notifyListeners();
@@ -27,7 +43,9 @@ class YuvCameraViewController extends ChangeNotifier {
 
   @override
   void dispose() {
+    _disposed = true;
     _capture = null;
+    _geometryOwner = null;
     _geometry.dispose();
     super.dispose();
   }
@@ -42,5 +60,5 @@ extension YuvCameraViewControllerBinding on YuvCameraViewController {
   void detach(Future<YuvImage?> Function() capture) => _detach(capture);
 
   /// Records the geometry of the displayed frame.
-  void setGeometry(YuvFrameGeometry geometry) => _setGeometry(geometry);
+  void setGeometry(Future<YuvImage?> Function() owner, YuvFrameGeometry? geometry) => _setGeometryFor(owner, geometry);
 }

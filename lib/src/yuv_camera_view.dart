@@ -105,7 +105,7 @@ class _YuvCameraViewState extends State<YuvCameraView> {
     if (viewController == null) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final geometry = _geometry;
-      if (mounted && geometry != null && widget.viewController == viewController) viewController.setGeometry(geometry);
+      if (mounted && geometry != null && widget.viewController == viewController) viewController.setGeometry(_requestCapture, geometry);
     });
   }
 
@@ -144,8 +144,9 @@ class _YuvCameraViewState extends State<YuvCameraView> {
   }
 
   void _onGeometry(YuvFrameGeometry geometry) {
+    if (_source == null || _error != null) return;
     _geometry = geometry;
-    widget.viewController?.setGeometry(geometry);
+    widget.viewController?.setGeometry(_requestCapture, geometry);
     if (mounted) setState(() {});
   }
 
@@ -191,6 +192,8 @@ class _YuvCameraViewState extends State<YuvCameraView> {
 
   void _onError(Object error) {
     _completeCapture(null);
+    _geometry = null;
+    widget.viewController?.setGeometry(_requestCapture, null);
     if (mounted) setState(() => _error = error);
     widget.onStreamStopped?.call();
   }
@@ -207,6 +210,8 @@ class _YuvCameraViewState extends State<YuvCameraView> {
     _source = null;
     _presenter.reset();
     _presentedCandidate = null;
+    _geometry = null;
+    widget.viewController?.setGeometry(_requestCapture, null);
     // Frame timestamps restart with every source; an old mark would hold onFrame back until the new clock passes it.
     _lastOnFrame = null;
     _completeCapture(null);
