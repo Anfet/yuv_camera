@@ -47,6 +47,7 @@ void main() {
         await _settle(tester);
         lease.release();
         await _waitFor(tester, () => orchestrator.state == YuvCameraState.closed, const Duration(seconds: 5), 'cycle $cycle: the camera to close');
+        await Future<void>.delayed(const Duration(seconds: 1));
         debugPrint('[orchestrator_cycles] cycle $cycle: closed');
       }
 
@@ -77,6 +78,7 @@ void main() {
 
         await tester.pumpWidget(const SizedBox());
         await _waitFor(tester, () => orchestrator.state == YuvCameraState.closed, const Duration(seconds: 5), 'round $round: the camera to close');
+        await Future<void>.delayed(const Duration(seconds: 1));
       }
 
       // (5) Two previews share one controller and one platform stream; either preview can go away independently.
@@ -150,6 +152,7 @@ void main() {
         const Duration(seconds: 5),
         'the shared camera to close after the last preview',
       );
+      await Future<void>.delayed(const Duration(seconds: 1));
       closedAfterFinalPreview = orchestrator.state == YuvCameraState.closed;
 
       // (6)

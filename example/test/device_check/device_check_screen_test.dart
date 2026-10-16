@@ -95,7 +95,7 @@ void main() {
     await tester.pumpWidget(const MaterialApp(home: DeviceCheckScreen(cameraEnabled: false)));
 
     expect(find.byType(AppBar), findsNothing);
-    expect(find.text('Hold the phone upright with the front camera facing you. Tap Start and hold still.'), findsOneWidget);
+    expect(find.text('Keep the camera in its normal position and facing you. Tap Start and hold still.'), findsOneWidget);
 
     for (int index = 0; index < 6; index++) {
       await tester.tap(find.text('Skip'));

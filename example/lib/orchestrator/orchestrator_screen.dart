@@ -5,6 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:yuv_camera/yuv_camera.dart';
 
+const _cameraSettleDelay = Duration(seconds: 1);
+const _cameraCloseTimeout = Duration(seconds: 30);
+
 /// Opens, closes and reopens the camera of [orchestrator] and shows what the orchestrator reports.
 class OrchestratorScreen extends StatefulWidget {
   const OrchestratorScreen({super.key, required this.orchestrator});
@@ -237,10 +240,17 @@ class _OrchestratorScreenState extends State<OrchestratorScreen> {
     for (var i = 0; i < 10 && mounted; i++) {
       try {
         final lease = await widget.orchestrator.acquire();
+        await Future<void>.delayed(_cameraSettleDelay);
         lease.release();
+        await _waitForCameraClosed();
+        if (!mounted) return;
+        await Future<void>.delayed(_cameraSettleDelay);
       } catch (error) {
         failed++;
-        if (mounted) setState(() => _log('cycle ${i + 1} failed: $error'));
+        if (mounted) {
+          setState(() => _log('cycle ${i + 1} failed: $error'));
+        }
+        break;
       }
     }
     if (!mounted) return;
@@ -248,6 +258,16 @@ class _OrchestratorScreenState extends State<OrchestratorScreen> {
       _log('10 cycles done · $failed errors');
       _cycling = false;
     });
+  }
+
+  Future<void> _waitForCameraClosed() async {
+    final watch = Stopwatch()..start();
+    while (widget.orchestrator.state != YuvCameraState.closed && watch.elapsed < _cameraCloseTimeout) {
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+    }
+    if (widget.orchestrator.state != YuvCameraState.closed) {
+      throw TimeoutException('Camera did not close after releasing its lease.', _cameraCloseTimeout);
+    }
   }
 
   void _onOrchestratorChanged() {
