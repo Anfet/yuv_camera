@@ -103,7 +103,7 @@ class YuvCameraOrchestrator extends ChangeNotifier {
     if (_disposing case final disposing?) return disposing;
     _isDisposed = true;
     _cancelCloseTimer();
-    _leases.clear();
+    _revokeLeases();
     super.dispose();
     return _disposing = _closeAfterTransition();
   }
@@ -153,6 +153,9 @@ class YuvCameraOrchestrator extends ChangeNotifier {
       final description = cameras.firstWhere((camera) => camera.lensDirection == lensDirection, orElse: () => cameras.first);
       controller = CameraController(description, resolution, enableAudio: false, fps: fps);
       await controller.initialize();
+      if (controller.value.hasError) {
+        throw StateError(controller.value.errorDescription ?? 'The camera controller reported an error.');
+      }
       final activeController = controller;
       void listener() => _controllerChanged(activeController);
       activeController.addListener(listener);
@@ -170,6 +173,9 @@ class YuvCameraOrchestrator extends ChangeNotifier {
             );
       } on UnimplementedError {
         // Older/custom platform implementations may expose errors only through CameraController.value.
+      }
+      if (activeController.value.hasError) {
+        throw StateError(activeController.value.errorDescription ?? 'The camera controller reported an error.');
       }
     } catch (error) {
       if (controller != null) await _disposeController(controller);
@@ -233,8 +239,15 @@ class YuvCameraOrchestrator extends ChangeNotifier {
   void _terminalController(CameraController controller, Object error) {
     if (!identical(_controller, controller)) return;
     _error = error;
-    _leases.clear();
+    _revokeLeases();
     _close(controller).ignore();
+  }
+
+  void _revokeLeases() {
+    for (final lease in _leases) {
+      lease._revoke();
+    }
+    _leases.clear();
   }
 
   Future<void> _closeAfterTransition() async {
@@ -293,9 +306,9 @@ final class YuvCameraLease {
 
   /// The initialized controller of the leased camera.
   ///
-  /// Throws a [StateError] after [release].
+  /// Throws a [StateError] after [release] or when the camera owner revokes this lease.
   CameraController get controller {
-    if (_isReleased) throw StateError('The camera lease was released.');
+    if (_isReleased || _isRevoked) throw StateError('The camera lease is no longer valid.');
     return _controller;
   }
 
@@ -309,7 +322,10 @@ final class YuvCameraLease {
     _onRelease(this);
   }
 
+  void _revoke() => _isRevoked = true;
+
   final CameraController _controller;
   final void Function(YuvCameraLease lease) _onRelease;
   bool _isReleased = false;
+  bool _isRevoked = false;
 }

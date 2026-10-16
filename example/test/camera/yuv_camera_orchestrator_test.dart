@@ -166,6 +166,24 @@ void main() {
     expect(orchestrator.state, YuvCameraState.closed);
   });
 
+  test('2f.1: an error event during initialization fails pending acquires before retry', () async {
+    final orchestrator = createOrchestrator();
+    platform.initializeError = 'camera failed while initializing';
+
+    final first = orchestrator.acquire();
+    final second = orchestrator.acquire();
+    await expectLater(first, throwsA(isA<StateError>().having((error) => error.message, 'message', contains('camera failed'))));
+    await expectLater(second, throwsStateError);
+
+    expect(orchestrator.controller, isNull);
+    expect(orchestrator.error, isA<StateError>());
+    expect(platform.disposedCameras, [1]);
+
+    final lease = await orchestrator.acquire();
+    expect(lease.controller.cameraId, 2);
+    expect(platform.events.indexOf('dispose:1'), lessThan(platform.events.indexOf('create:2')));
+  });
+
   test('2g: release is idempotent, ignored after dispose, and a released lease has no controller', () async {
     final orchestrator = createOrchestrator();
     final first = await orchestrator.acquire();
@@ -178,9 +196,31 @@ void main() {
     expect(() => first.controller, throwsStateError);
     expect(orchestrator.state, YuvCameraState.open);
     await orchestrator.dispose();
+    expect(second.isReleased, isFalse);
+    expect(() => second.controller, throwsStateError);
     second.release();
     expect(second.isReleased, isTrue);
+    expect(() => second.controller, throwsStateError);
     expect(platform.disposedCameras, [1]);
+  });
+
+  test('2g.1: terminal error revokes leases and late release cannot close the retry camera', () async {
+    final orchestrator = createOrchestrator();
+    final oldLease = await orchestrator.acquire();
+
+    platform.emitCameraError(1, 'camera disconnected');
+    await untilClosed(orchestrator);
+    expect(() => oldLease.controller, throwsStateError);
+    expect(oldLease.isReleased, isFalse);
+
+    final newLease = await orchestrator.acquire();
+    oldLease.release();
+    oldLease.release();
+
+    expect(oldLease.isReleased, isTrue);
+    expect(newLease.controller.cameraId, 2);
+    expect(orchestrator.controller, same(newLease.controller));
+    newLease.release();
   });
 
   test('2h: dispose waits for the opening, closes at once, rejects acquire and stops notifying', () async {

@@ -101,6 +101,9 @@ class FakeCameraPlatform extends CameraPlatform {
   /// When set, the next `initializeCamera` call throws it.
   CameraException? failNextInitialize;
 
+  /// When set, initialization emits an error event before its initialized event.
+  String? initializeError;
+
   /// When set, the next `onStreamedFrameAvailable` call throws it, the way a
   /// plugin reports a camera that cannot stream.
   PlatformException? failNextStreamStart;
@@ -141,12 +144,18 @@ class FakeCameraPlatform extends CameraPlatform {
       failNextInitialize = null;
       throw failure;
     }
+    final error = initializeError;
+    if (error != null) {
+      initializeError = null;
+      _events.add(CameraErrorEvent(cameraId, error));
+      await Future<void>.delayed(Duration.zero);
+    }
     _events.add(CameraInitializedEvent(cameraId, frameWidth.toDouble(), frameHeight.toDouble(), ExposureMode.auto, false, FocusMode.auto, false));
   }
 
   @override
   Stream<CameraInitializedEvent> onCameraInitialized(int cameraId) =>
-      _events.stream.where((event) => event.cameraId == cameraId).cast<CameraInitializedEvent>();
+      _events.stream.where((event) => event.cameraId == cameraId && event is CameraInitializedEvent).cast<CameraInitializedEvent>();
 
   @override
   Stream<DeviceOrientationChangedEvent> onDeviceOrientationChanged() => const Stream.empty();
