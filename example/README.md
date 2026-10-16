@@ -26,17 +26,29 @@ declares it. Linux builds require GStreamer development libraries; macOS needs `
 camera entitlement (both set here). Web camera access requires Chrome over localhost or HTTPS and browser permission.
 ML Kit face detection runs only on Android and iOS; other platforms skip it. For Android release builds, R8 removes the constructors ML Kit needs to start, so the example keeps them in android/app/proguard-rules.pro; an app using ML Kit needs the same rule.
 
-The example checkout does not include a Linux runner. To try it on Linux, make a disposable copy and generate the runner
-there so the package checkout stays unchanged. From the package root:
+The example checkout does not include a Linux runner. To try the local pair on Linux, archive the committed package
+trees into a temporary directory and generate the runner there. Keep the example under its package: its `path: ..`
+dependency needs that parent directory. From the `yuv_camera` Git checkout, with `yuv_ffi` in the sibling directory:
 
-```powershell
-$copy = Join-Path $env:TEMP 'yuv_camera-example-linux'
-Copy-Item -Recurse -Force example $copy
-Set-Location $copy
+```bash
+set -euo pipefail
+linux_copy=$(mktemp -d)
+mkdir "$linux_copy/yuv_camera" "$linux_copy/yuv_ffi"
+git -c core.autocrlf=false archive HEAD | tar -x -C "$linux_copy/yuv_camera"
+git -C ../yuv_ffi -c core.autocrlf=false archive HEAD | tar -x -C "$linux_copy/yuv_ffi"
+cd "$linux_copy/yuv_camera/example"
+cat > pubspec_overrides.yaml <<'YAML'
+dependency_overrides:
+  yuv_ffi:
+    path: ../../yuv_ffi
+YAML
 flutter create --platforms=linux --project-name yuv_camera_example .
 flutter pub get
 flutter run -d linux
 ```
+
+This leaves both source checkouts unchanged. The temporary pair uses each checkout's committed `HEAD`; uncommitted
+changes and ignored overrides are excluded. The Linux prerequisites above still apply.
 
 ## Verified
 
