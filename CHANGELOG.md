@@ -2,6 +2,8 @@
 
 * First release of `yuv_camera`, extracted from the `yuv_ffi` example camera layer.
 * Camera capture waits for a painted preview frame and stays pending while the view is offstage.
+* Capture has no built-in timeout; removing the view ends a pending capture with `null`. A controller id or description
+  change stops its active YUV source, so camera switching uses a newly initialized controller and view update.
 * The orchestrator handles platform `CameraErrorEvent`s and cancels its subscription before disposing the controller.
 * Terminal controller or frame-stream errors invalidate orchestrator leases and drain frame cancellation before
   disposal; `YuvCameraLeaseBuilder` can retry with a fresh controller without route navigation.

@@ -312,7 +312,10 @@ final class YuvCameraLease {
     return _controller;
   }
 
-  /// Whether [release] was called.
+  /// Whether [release] was called manually.
+  ///
+  /// A terminal camera error can revoke this lease without setting this flag.
+  /// After revocation, [controller] throws [StateError] even when this is false.
   bool get isReleased => _isReleased;
 
   /// Gives the camera back to the orchestrator; later calls do nothing.

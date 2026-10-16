@@ -150,6 +150,11 @@ What the example does:
 - `capture()` returns the next frame that is actually drawn, cropped to what is
   visible, or `null` if the view is not attached or stops before drawing. A
   stream ending unexpectedly is reported as a stream error and stops the view.
+  There is no built-in capture timeout; if an attached view has not drawn a
+  frame, the future stays pending until it draws or the view is removed.
+- `viewController.geometry` is `null` before the first frame, while the view is
+  detached, and while it switches to another controller. Read it again after
+  the notifier changes.
 - A `YuvCameraOrchestrator` treats a controller error or frame-stream failure as terminal: active leases are invalidated,
   the controller is drained and disposed, and `YuvCameraLeaseBuilder` shows Retry. Retry opens a fresh controller.
 - A native controller's image stream is exclusively owned while a YUV source is active. Do not call
@@ -184,7 +189,12 @@ onFrame: (frame) {
 ```
 
 The image returned by `capture()` is a new image owned by your code. Heavy
-synchronous work in `onFrame` blocks the UI isolate and stops painting.
+synchronous work in `onFrame` blocks the UI isolate and stops painting. On
+Android, frame orientation follows the current device and sensor orientation;
+`CameraController.lockCaptureOrientation()` does not lock the orientation
+reported for YUV preview frames. To switch cameras, remove the view and create
+a new controller for the selected camera; changing its description in place
+stops the active YUV source rather than switching it seamlessly.
 
 ### Processing frames with ML Kit
 

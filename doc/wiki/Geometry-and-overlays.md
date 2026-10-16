@@ -14,8 +14,9 @@ that are expressed in the upright frame (a detector's bounding boxes, for exampl
 
 - `overlayBuilder: (context, geometry) => ...` builds a widget stacked over the preview. It is called only once a frame has
   been drawn and the geometry is known, and it is rebuilt when the geometry changes.
-- `viewController.geometry` is a `ValueListenable<YuvFrameGeometry?>`: `null` until the first frame is drawn, then the
-  current geometry. Use it outside the overlay, for example to show or hit-test things elsewhere.
+- `viewController.geometry` is a `ValueListenable<YuvFrameGeometry?>`: `null` until the first frame is drawn, after the
+  view is detached, and while it switches controllers; otherwise it holds the current geometry. Use it outside the
+  overlay, for example to show or hit-test things elsewhere.
 
 Always map through the geometry you are given. It already contains the fit (`cover` by default), the alignment, the
 rotation and the mirror of the current frame.
@@ -149,7 +150,7 @@ map its result with `uprightToView`, which includes the mirror.
 | The overlay is missing at first | `overlayBuilder` runs only after a frame has been drawn. This is expected for the first moments. |
 | The box is offset when the preview is cropped | Compare `fit`: with `cover` part of the frame is outside the view. Boxes are mapped correctly, but a box near the frame's edge can lie outside the view. Use `geometry.visibleSourceRect` to test visibility. |
 | The overlay lags behind the picture | The detector result describes an older frame. The geometry is the current one; for a fast-moving subject, accept some lag or process more often. |
-| `viewController.geometry` is `null` | No frame has been drawn yet, or the view is not attached. Listen to the notifier and use the value once it arrives. |
+| `viewController.geometry` is `null` | No frame has been drawn yet, the view is detached, or it is switching controllers. Listen to the notifier and use the value once it arrives. |
 
 ## Related pages
 

@@ -30,13 +30,19 @@ The `camera` plugin's own documentation describes how to react to the app moving
 `YuvCameraLeaseBuilder` releases its lease while hidden and acquires one again when shown. For controller replacement:
 if you pass a different `CameraController` to an existing `YuvCameraView`, it stops the old stream without calling
 `onStreamStopped`, drops any frame and capture in flight, and starts the new one.
+Do not switch a controller in place with `setDescription`: a changed camera id or description is a terminal source
+error. Remove the old view, create and initialize a new `CameraController`, then build the view with it.
+
+On Android, `YuvCameraFrame.orientation` is calculated from the current device orientation and the camera sensor
+orientation. `CameraController.lockCaptureOrientation()` does not lock this YUV preview orientation; do not assume it
+has the same policy as `CameraPreview`.
 
 ## `YuvCameraView` at a glance
 
 | Parameter | Meaning |
 | --- | --- |
 | `cameraController` | Required. The initialized controller whose frames are shown. |
-| `viewController` | A `YuvCameraViewController` for capture and the current geometry. |
+| `viewController` | A `YuvCameraViewController` for capture and the current geometry; `geometry` is `null` before the first drawn frame, after detach, or while switching controllers. |
 | `fit`, `alignment` | How the frame fills the space. `fit` defaults to `YuvFrameFit.cover`, which crops the picture; use `contain` to see all of it. |
 | `onFrame`, `onFrameInterval` | Your frame callback and its minimum interval (200 ms by default). See [Frame processing](https://github.com/Anfet/yuv_camera/wiki/Frame-processing). |
 | `overlayBuilder` | Builds a widget over the preview from the geometry of the displayed frame. See [Geometry and overlays](https://github.com/Anfet/yuv_camera/wiki/Geometry-and-overlays). |
@@ -52,6 +58,8 @@ controller after cancellation completes; its `YuvCameraLeaseBuilder` displays Re
 
 `viewController.capture()` returns the next frame that is actually drawn on screen, cropped to what is visible, as a new
 `YuvImage` (or `null`). This recipe adds a capture button to a preview, shows the result and encodes it as PNG.
+There is no built-in timeout. If the view remains attached but has not drawn a frame, the future stays pending; removing
+the view completes pending capture with `null`.
 
 ```dart
 import 'dart:typed_data';

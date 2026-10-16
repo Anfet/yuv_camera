@@ -51,16 +51,23 @@ Native sources accept the plugin's default image format, `ImageFormatGroup.yuv42
 Two-plane `yuv420` is imported as NV12; three-plane `yuv420` is imported as I420; one-plane BGRA remains packed.
 Plane strides and layouts are preserved. Malformed plane layouts stop the stream and report a `FormatException`; an
 unsupported format group reports `UnsupportedError`. YUV conversion uses BT.601 limited/video range as defined by
-`yuv_ffi`; full-range data and other color matrices are not detected. Do not request `ImageFormatGroup.nv21` for this source; choose the default or a supported group. The iOS
-NV12 VM/simulator fixture models the plugin payload; physical iPhone NV12 capture has not been verified.
+`yuv_ffi`; full-range data and other color matrices are not detected. Do not request `ImageFormatGroup.nv21` for this source; choose the default or a supported group. Physical NV12 capture (raw frames, drawn preview and capture) was verified for the front and back cameras on an iPhone 11 with iOS 18.7.8. Separate NV12 landscape and mirror runs were not performed.
 
 `onFrame` receives a `YuvCameraFrame`. Its `image` preserves source plane strides; `upright()` returns a cached packed,
 oriented image. Both belong to the delivery: call `copy()` before mutating either. Call `YuvFfi.initialize()` before
 processing, as in the README.
 
 `capture()` returns the next drawn frame, cropped and oriented to the visible region. Its result is owned by the
-application. Handle `null` when the view is detached or stops before a pending capture completes. Repeated calls while
-one capture is pending share its future. Use `viewController.geometry` for overlays in the displayed coordinate space.
+application. Handle `null` when the view is detached or stops before a pending capture completes. It has no built-in
+timeout: while the view remains attached but no frame is drawn, the future can stay pending. Remove the view to cancel
+its pending capture. Repeated calls while one capture is pending share its future. Use `viewController.geometry` for
+overlays in the displayed coordinate space; it is `null` before a frame is drawn and while the view is detached or
+switching controllers.
+
+On Android, `YuvCameraFrame.orientation` follows the current device orientation and camera sensor orientation. Calling
+the camera plugin's `lockCaptureOrientation()` does not lock the orientation reported for these YUV preview frames.
+For a camera switch, remove the view and create and initialize a new `CameraController` for the selected description;
+changing `description` in place stops the active YUV source and is not a seamless switch.
 
 On Web the source uses a second stream, matching the initialized controller's unique, non-empty device label; it falls
 back to lens direction for missing or ambiguous labels. Resolution and FPS are browser preferences. Test your real
@@ -85,6 +92,7 @@ navigation away and back, background/resume, denied permissions and stream failu
 Confirm Android `minSdk >= 26`, iOS/macOS usage descriptions, macOS camera entitlement and the desktop provider;
 see [platform setup](README.md#platform-setup).
 
-Until both packages are published, development overrides can select the local pair from a Git checkout, as documented in the README.
-Those results prove that pair only. After publication remove overrides, run `flutter pub get`, and confirm that
-`.dart_tool/package_config.json` resolves both packages from `hosted/pub.dev` before testing the published pair.
+For local paired development from Git checkouts, use ignored `pubspec_overrides.yaml` files as shown in the README, or
+run `tool/check_pair.ps1` for an exact pair. These checks validate that local pair only. To check a hosted release, remove
+the overrides, run `flutter pub get`, and confirm that `.dart_tool/package_config.json` resolves both packages from
+`hosted/pub.dev`.

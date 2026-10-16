@@ -24,6 +24,8 @@ abstract interface class YuvCameraFrameSource {
   ///
   /// Native `yuv420` frames with two planes are imported as NV12; three-plane frames are imported as I420.
   /// A single-plane `bgra8888` frame remains packed BGRA. Unsupported plane layouts stop the source and reach [onError].
+  /// A change to the controller's camera id or description is a terminal source error. Create and initialize a new
+  /// controller to switch cameras; the source does not switch in place.
   factory YuvCameraFrameSource(
     CameraController controller, {
     required void Function(YuvCameraFrame frame) onFrame,

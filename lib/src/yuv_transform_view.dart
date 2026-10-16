@@ -5,6 +5,9 @@ import 'package:yuv_camera/src/yuv_camera_frame.dart';
 import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
 
 /// Camera preview whose accepted frames are synchronously transformed first.
+///
+/// [transform] must return an upright image. The view copies the returned image
+/// for drawing; copy a delivered frame image before mutating it.
 class YuvTransformView extends StatefulWidget {
   /// Creates a preview for [cameraController], which must be initialized, drawing the result of [transform].
   ///
@@ -28,6 +31,7 @@ class YuvTransformView extends StatefulWidget {
   ///
   /// The returned image is drawn as supplied; the view does not apply the frame orientation again. Use
   /// `frame.upright().copy()` before mutating pixels because the frame owns the image returned by `upright()`.
+  /// If this callback throws, the frame is dropped, the error is reported to Flutter, and the stream continues.
   final YuvImage Function(YuvCameraFrame frame) transform;
 
   /// How the image is fitted into the available space.

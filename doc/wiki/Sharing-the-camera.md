@@ -161,15 +161,17 @@ Future<void> useCamera(YuvCameraOrchestrator orchestrator) async {
 }
 ```
 
-`release()` is safe to call twice. `lease.controller` throws a `StateError` after `release()`. The orchestrator does not
-watch the app lifecycle, so release manually acquired leases yourself when the app goes to the background.
+`release()` is safe to call twice. `lease.isReleased` reports only whether your code called `release()`; a terminal
+controller or frame-stream error can revoke a lease while `isReleased` remains false. In either case,
+`lease.controller` throws `StateError` once the lease is no longer valid. The orchestrator does not watch the app
+lifecycle, so release manually acquired leases yourself when the app goes to the background.
 
 ## Limits and errors
 
 | Symptom | Check and action |
 | --- | --- |
 | `acquire()` throws `CameraException` with code `noCamera`, or the builder shows `Camera unavailable: ...` | The device reports no camera. Check that a camera is connected and, on desktop, that `camera_desktop` is in `pubspec.yaml`. The orchestrator is `closed` again and keeps the failure in `error`; the next `acquire()` or Retry tries again. |
-| `Bad state: The camera lease was released.` | You read `lease.controller` after `release()`. Keep the lease for as long as you use the controller, or build from `YuvCameraLeaseBuilder`, which hands the controller only while the lease is held. |
+| `Bad state: The camera lease is no longer valid.` | You read `lease.controller` after manually releasing the lease or after the orchestrator revoked it on a terminal error. Acquire a new lease after recovery. |
 | `Bad state: The camera orchestrator was disposed.` | `dispose()` rejects new `acquire()` calls and completes the waiting ones with this error. Dispose the orchestrator only when no screen needs it any more. |
 | The camera stays open after the app goes to the background | A lease acquired by hand is not released automatically. Release it when the app is hidden, or use `YuvCameraLeaseBuilder`. |
 | The camera closes and reopens when you move between screens | The last lease was released and `closeDelay` passed (zero by default). Raise `closeDelay` or hold a lease across the navigation. |

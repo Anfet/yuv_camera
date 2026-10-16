@@ -12,10 +12,14 @@ class YuvCameraViewController extends ChangeNotifier {
   bool _disposed = false;
 
   /// Geometry used for the currently displayed frame.
+  ///
+  /// Is `null` before a frame is drawn, after the view is detached, and while
+  /// it switches to another controller. Listen for changes before using it.
   ValueListenable<YuvFrameGeometry?> get geometry => _geometry;
 
   /// Returns the next frame that is actually drawn, cropped to what is visible.
   /// Completes with `null` if the view stops, including when its frame stream fails, before a frame is drawn.
+  /// There is no timeout; while the view stays attached without drawing a frame, this future can remain pending.
   Future<YuvImage?> capture() => _capture?.call() ?? Future<YuvImage?>.value(null);
 
   void _attach(Future<YuvImage?> Function() capture) {

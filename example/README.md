@@ -26,6 +26,18 @@ declares it. Linux builds require GStreamer development libraries; macOS needs `
 camera entitlement (both set here). Web camera access requires Chrome over localhost or HTTPS and browser permission.
 ML Kit face detection runs only on Android and iOS; other platforms skip it. For Android release builds, R8 removes the constructors ML Kit needs to start, so the example keeps them in android/app/proguard-rules.pro; an app using ML Kit needs the same rule.
 
+The example checkout does not include a Linux runner. To try it on Linux, make a disposable copy and generate the runner
+there so the package checkout stays unchanged. From the package root:
+
+```powershell
+$copy = Join-Path $env:TEMP 'yuv_camera-example-linux'
+Copy-Item -Recurse -Force example $copy
+Set-Location $copy
+flutter create --platforms=linux --project-name yuv_camera_example .
+flutter pub get
+flutter run -d linux
+```
+
 ## Verified
 
 The checks are run from the root of the Git repository with the scripts in `tool/ci/` (not included in the pub.dev
