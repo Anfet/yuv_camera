@@ -330,6 +330,89 @@ void main() {
     viewController.dispose();
   });
 
+  testWidgets('capture stays pending when the viewport is fully outside and completes after it becomes visible', (tester) async {
+    final viewController = YuvCameraViewController();
+    var alignment = const Alignment(0, 10);
+    var presentedFrames = 0;
+    late StateSetter updateLayout;
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatefulBuilder(
+          builder: (context, setState) {
+            updateLayout = setState;
+            return Center(
+              child: SizedBox(
+                width: 100,
+                height: 100,
+                child: YuvCameraView(
+                  cameraController: camera,
+                  viewController: viewController,
+                  fit: YuvFrameFit.contain,
+                  alignment: alignment,
+                  onFramePresented: (_) => presentedFrames++,
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+    await settleCamera(tester);
+
+    final capture = viewController.capture();
+    var captureDone = false;
+    final captured = capture.then((image) {
+      captureDone = true;
+      return image;
+    });
+    platform.emit(camera.cameraId, cameraFrame(83, width: 8, height: 6));
+    await tester.pump();
+    await tester.pump();
+    expect(captureDone, isFalse);
+    expect(presentedFrames, 0);
+
+    updateLayout(() => alignment = Alignment.center);
+    await tester.pump();
+    await pumpUntil(tester, () => captureDone, reason: 'the preview to become visible');
+    final image = await captured;
+    expect(image?.size, const Size(8, 6));
+    expect(image == null ? null : shadeOfYuv(image), 83);
+    expect(presentedFrames, 1);
+
+    await tester.pumpWidget(const SizedBox());
+    viewController.dispose();
+  });
+
+  testWidgets('stopping the view while fully outside completes capture with null', (tester) async {
+    final viewController = YuvCameraViewController();
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Center(
+          child: SizedBox(
+            width: 100,
+            height: 100,
+            child: YuvCameraView(
+              cameraController: camera,
+              viewController: viewController,
+              fit: YuvFrameFit.contain,
+              alignment: const Alignment(0, 10),
+            ),
+          ),
+        ),
+      ),
+    );
+    await settleCamera(tester);
+
+    final capture = viewController.capture();
+    platform.emit(camera.cameraId, cameraFrame(84, width: 8, height: 6));
+    await tester.pump();
+    await tester.pump();
+    await tester.pumpWidget(const SizedBox());
+
+    expect(await capture.timeout(const Duration(seconds: 1)), isNull);
+    viewController.dispose();
+  });
+
   testWidgets('stream error between paint and deferred capture completion completes null once', (tester) async {
     platform.synchronousStreams = true;
     final viewController = YuvCameraViewController();
