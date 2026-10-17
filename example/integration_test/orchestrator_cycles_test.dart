@@ -14,6 +14,7 @@ void main() {
   setUp(() => binding.platformDispatcher.semanticsEnabledTestValue = false);
   tearDown(binding.platformDispatcher.clearSemanticsEnabledTestValue);
 
+  // Cover the maximum combined 697.5 s wait budget, rounded up to 698 s.
   testWidgets('the camera opens and closes in cycles, with and without a preview', (tester) async {
     await tester.pumpWidget(const SizedBox());
     await YuvFfi.initialize();
@@ -201,7 +202,7 @@ void main() {
       'survivingPreviewDrawCount': survivingPreviewDrawCount,
       'closedAfterFinalPreview': closedAfterFinalPreview,
     };
-  }, timeout: const Timeout(Duration(minutes: 10)));
+  }, timeout: const Timeout(Duration(seconds: 698)));
 }
 
 Future<void> _waitFor(WidgetTester tester, bool Function() condition, Duration limit, String what) async {
