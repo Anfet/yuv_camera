@@ -1,5 +1,6 @@
 ## 0.0.1
 
+* Web frame sources cancel each reader once, handle cancellation rejection, and drain pending teardown across restarts.
 * First release of `yuv_camera`, extracted from the `yuv_ffi` example camera layer.
 * Camera capture waits for a painted preview frame and stays pending while the view is offstage.
 * Capture has no built-in timeout; removing the view ends a pending capture with `null`. A controller id or description

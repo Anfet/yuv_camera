@@ -9,6 +9,8 @@ driver_pid=$!
 trap 'kill "$driver_pid" 2>/dev/null || true; wait "$driver_pid" 2>/dev/null || true' EXIT
 cd "$repo_root/example"
 flutter pub get
+"$script_dir/drive.sh" integration_test/camera_source_web_lifecycle_test.dart web-server --browser-name=chrome --headless --web-browser-flag=--use-fake-device-for-media-stream --web-browser-flag=--use-fake-ui-for-media-stream --no-pub
+echo 'PASS Chrome JavaScript camera source lifecycle regression.'
 "$script_dir/drive.sh" integration_test/camera_source_web_smoke_test.dart web-server --browser-name=chrome --headless --web-browser-flag=--use-fake-device-for-media-stream --web-browser-flag=--use-fake-ui-for-media-stream --no-pub
 echo 'PASS Chrome JavaScript camera source smoke.'
 "$script_dir/drive.sh" integration_test/shape_crop_test.dart web-server --browser-name=chrome --headless --web-browser-flag=--use-fake-device-for-media-stream --web-browser-flag=--use-fake-ui-for-media-stream --no-pub

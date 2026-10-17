@@ -31,6 +31,7 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     @visibleForTesting this.onVideoFrameClosedForTesting,
     @visibleForTesting this.onRgbaPixelsForTesting,
     @visibleForTesting this.onCopyProbeForTesting,
+    @visibleForTesting this.createReaderForTesting,
   });
 
   final CameraController controller;
@@ -48,6 +49,10 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   final void Function(Uint8List rgba)? onRgbaPixelsForTesting;
   @visibleForTesting
   final void Function()? onCopyProbeForTesting;
+
+  /// Replaces only reader acquisition; [track] remains owned by this source.
+  @visibleForTesting
+  final web.ReadableStreamDefaultReader Function(web.MediaStreamTrack track)? createReaderForTesting;
   final Stopwatch _clock = Stopwatch();
   final web.HTMLVideoElement _video = web.HTMLVideoElement()
     ..autoplay = true
@@ -56,6 +61,7 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   web.MediaStream? _stream;
   web.MediaStreamTrack? _videoTrack;
   web.ReadableStreamDefaultReader? _reader;
+  Future<void> _pendingTeardown = Future<void>.value();
   JSFunction? _endedListener;
   int? _videoFrameRequest;
   int _generation = 0;
@@ -165,8 +171,10 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     final tracks = stream.getVideoTracks().toDart;
     if (tracks.isEmpty) return false;
     try {
-      final processor = web.MediaStreamTrackProcessor(web.MediaStreamTrackProcessorInit(track: tracks.first));
-      final reader = web.ReadableStreamDefaultReader(processor.readable);
+      final createReader = createReaderForTesting;
+      final reader = createReader != null
+          ? createReader(tracks.first)
+          : web.ReadableStreamDefaultReader(web.MediaStreamTrackProcessor(web.MediaStreamTrackProcessorInit(track: tracks.first)).readable);
       _reader = reader;
       _readLoop(reader, generation).ignore();
       return true;
@@ -324,7 +332,11 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     _clock.stop();
     final reader = _reader;
     _reader = null;
-    reader?.cancel();
+    if (reader != null) {
+      // Attach the rejection handler now, even when the caller only uses stop().
+      final cancellation = _cancelReader(reader);
+      _pendingTeardown = Future.wait<void>([_pendingTeardown, cancellation]).then<void>((_) {});
+    }
     final videoFrameRequest = _videoFrameRequest;
     if (videoFrameRequest != null) _video.cancelVideoFrameCallback(videoFrameRequest);
     _videoFrameRequest = null;
@@ -340,14 +352,16 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   }
 
   Future<void> stopAndWait() async {
-    final reader = _reader;
     stop();
-    if (reader != null) {
-      try {
-        await reader.cancel().toDart;
-      } catch (_) {
-        // Cancelling an already closed browser reader is an expected teardown race.
-      }
+    await _pendingTeardown;
+  }
+
+  Future<void> _cancelReader(web.ReadableStreamDefaultReader reader) async {
+    try {
+      await reader.cancel().toDart;
+    } catch (_) {
+      // An errored/closed reader may reject cancellation. Teardown still releases
+      // its tracks; this expected race must not replace the original read error.
     }
   }
 

@@ -16,6 +16,9 @@ Push-Location (Join-Path $root 'example')
 try { Invoke-CameraCommand flutter 'pub', 'get' } finally { Pop-Location }
 $server = Start-Process -FilePath $driver -ArgumentList '--port=4444' -WindowStyle Hidden -PassThru
 try {
+  & (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/camera_source_web_lifecycle_test.dart' 'web-server' '--browser-name=chrome' '--headless' '--web-browser-flag=--use-fake-device-for-media-stream' '--web-browser-flag=--use-fake-ui-for-media-stream' '--no-pub'
+  if ($LASTEXITCODE -ne 0) { throw "Web source lifecycle target failed with exit code $LASTEXITCODE" }
+  Write-Output 'PASS Chrome JavaScript camera source lifecycle regression.'
   & (Join-Path $PSScriptRoot 'drive.ps1') 'integration_test/web_device_choice_test.dart' 'web-server' '--browser-name=chrome' '--headless' '--web-browser-flag=--use-fake-device-for-media-stream=device-count=2' '--web-browser-flag=--use-fake-ui-for-media-stream' '--no-pub'
   if ($LASTEXITCODE -ne 0) { throw "Web device choice target failed with exit code $LASTEXITCODE" }
   $deviceEvidence = Get-Content -LiteralPath (Join-Path $root 'example/build/integration_response_data.json') -Raw | ConvertFrom-Json
