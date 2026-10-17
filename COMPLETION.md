@@ -11,6 +11,7 @@
 ## 17.10.2026
 
 - **COMPAT 3** — DONE (ACCEPTED, R82 Review 1, 17.10.2026). Reviewed yuv_camera `6bd4db65e083c5d336ddec49000d01e47fe6845b`, paired yuv_ffi `af59332992b645e985e59450fcc6fda0df68177c`. Local-only consumer fixture `tasks/0.5.2/fixtures/COMPAT-3/` covers public camera frame/orientation/controller API and compile-ready view/lease composition. `prepare.ps1 -ValidateOnly` exit 0; minimum-SDK, runtime and physical camera remain CHECK 21. CI: none (D-38).
+- **TEST 1** — DONE (ACCEPTED, R82 Review 2, 17.10.2026). Reviewed yuv_camera `5f7e2c3eecfe96354b228ac533f12066ce56317c`. The integration target now gives its bounded waits a 698 s total budget (697.5 s calculated). Formatter/analyze passed; Chrome 155 / ChromeDriver 155 live target exited 0 with `All tests passed`; the negative control exited 1 with `TEST1_SURVIVOR_TIMEOUT`. Event-progress assertions, shared controller identity and final close remain in place; production lifecycle is unchanged. Full platform checks remain with CHECK 20/22; CI is not used (D-38).
 
 ## 15.10.2026
 
