@@ -1,5 +1,7 @@
 ## 0.0.1
 
+* Web frame sources stop their tracks and report `UnsupportedError` when neither frame processor nor video-frame callback is available.
+
 * Web frame sources cancel each reader once, handle cancellation rejection, and drain pending teardown across restarts.
 * First release of `yuv_camera`, extracted from the `yuv_ffi` example camera layer.
 * Camera capture waits for a painted preview frame and stays pending while the view is offstage.

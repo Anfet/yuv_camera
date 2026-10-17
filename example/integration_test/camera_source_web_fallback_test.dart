@@ -24,6 +24,60 @@ void main() {
     final controller = CameraController(camera, ResolutionPreset.medium, enableAudio: false);
     await controller.initialize();
 
+    final unhandled = <Object?>[];
+    final rejectionListener = ((web.PromiseRejectionEvent event) {
+      unhandled.add(event.reason);
+      event.preventDefault();
+    }).toJS;
+    web.window.addEventListener('unhandledrejection', rejectionListener);
+    addTearDown(() => web.window.removeEventListener('unhandledrejection', rejectionListener));
+    final stoppedTracks = <web.MediaStreamTrack>[];
+    YuvCameraFrameSourceImpl.onTrackStoppedForTesting = stoppedTracks.add;
+    addTearDown(() => YuvCameraFrameSourceImpl.onTrackStoppedForTesting = null);
+    for (final scenario in [(processor: false, callback: false), (processor: true, callback: false), (processor: false, callback: true)]) {
+      final errors = <Object>[];
+      var deliveries = 0;
+      final source = YuvCameraFrameSourceImpl(
+        controller,
+        onFrame: (_) => deliveries++,
+        onError: errors.add,
+        forceCanvasCallbackForTesting: !scenario.processor,
+        videoFrameCallbackAvailableForTesting: scenario.callback,
+      );
+      addTearDown(source.dispose);
+      for (var session = 0; session < 2; session++) {
+        final deliveredBefore = deliveries;
+        final errorsBefore = errors.length;
+        final tracksBefore = stoppedTracks.length;
+        await source.start();
+        await _waitFor(tester, () => deliveries > deliveredBefore || errors.length > errorsBefore, 'API matrix $scenario session $session');
+        if (!scenario.processor && !scenario.callback) {
+          expect(errors, hasLength(errorsBefore + 1));
+          expect(errors.last, isA<UnsupportedError>());
+          expect(errors.last.toString(), contains('MediaStreamTrackProcessor or requestVideoFrameCallback'));
+          expect(deliveries, deliveredBefore);
+          expect(source.videoTrackForTesting, isNull);
+          expect(stoppedTracks.length, greaterThan(tracksBefore));
+          expect(stoppedTracks.skip(tracksBefore).every((track) => track.readyState == 'ended'), isTrue);
+        } else {
+          expect(errors, isEmpty, reason: '$scenario');
+          expect(deliveries, greaterThan(deliveredBefore));
+        }
+        await source.stopAndWait();
+        final afterStop = deliveries;
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(deliveries, afterStop, reason: 'no late frames after matrix stop');
+        expect(errors, hasLength(scenario.processor || scenario.callback ? 0 : session + 1));
+      }
+      source.dispose();
+      await source.stopAndWait();
+      final afterDispose = deliveries;
+      await source.start();
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(deliveries, afterDispose);
+      expect(unhandled, isEmpty);
+    }
+
     final branches = <String, int>{};
     var frameCloseCount = 0;
     final closedFrames = HashMap<Object, int>.identity();

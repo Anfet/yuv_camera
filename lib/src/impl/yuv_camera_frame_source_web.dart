@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:js_interop';
+import 'dart:js_interop_unsafe';
 import 'dart:typed_data';
 
 import 'package:web/web.dart' as web;
@@ -26,6 +27,7 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
     required this.onFrame,
     required this.onError,
     @visibleForTesting this.forceCanvasCallbackForTesting = false,
+    @visibleForTesting this.videoFrameCallbackAvailableForTesting,
     @visibleForTesting this.forceVisibleRectMismatchForTesting = false,
     @visibleForTesting this.onBranchForTesting,
     @visibleForTesting this.onVideoFrameClosedForTesting,
@@ -39,6 +41,8 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   final void Function(Object error) onError;
   @visibleForTesting
   final bool forceCanvasCallbackForTesting;
+  @visibleForTesting
+  final bool? videoFrameCallbackAvailableForTesting;
   @visibleForTesting
   final bool forceVisibleRectMismatchForTesting;
   @visibleForTesting
@@ -120,14 +124,18 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
   }
 
   Future<void> _startSession(int generation) async {
-    final copyMode = await _probeCopyMode();
-    if (_disposed || generation != _generation) return;
-    _copyMode = copyMode;
-    _clock
-      ..reset()
-      ..start();
-    _running = true;
-    if (!_startTrackProcessor(generation)) _scheduleNext();
+    try {
+      final copyMode = await _probeCopyMode();
+      if (_disposed || generation != _generation) return;
+      _copyMode = copyMode;
+      _clock
+        ..reset()
+        ..start();
+      _running = true;
+      if (!_startTrackProcessor(generation)) _scheduleNext();
+    } catch (error) {
+      _fail(error, generation);
+    }
   }
 
   Future<WebFrameCopyMode> _probeCopyMode() async {
@@ -266,6 +274,11 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
 
   void _scheduleNext() {
     if (!_running) return;
+    final available = videoFrameCallbackAvailableForTesting ?? _video.getProperty<JSAny?>('requestVideoFrameCallback'.toJS).isA<JSFunction>();
+    if (!available) {
+      _fail(UnsupportedError('Camera frames require MediaStreamTrackProcessor or requestVideoFrameCallback'), _generation);
+      return;
+    }
     _videoFrameRequest = _video.requestVideoFrameCallback(
       ((num _, web.VideoFrameMetadata _) {
         if (forceCanvasCallbackForTesting) onBranchForTesting?.call('canvasCallback');

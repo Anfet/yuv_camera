@@ -43,8 +43,10 @@ which reports every Windows camera as front. On macOS and Linux the package appl
 
 - Browsers expose the camera only in a secure context: serve the app from `localhost` or over HTTPS, and let the user
   grant the camera permission ([MDN: `getUserMedia`](https://developer.mozilla.org/en-US/docs/Web/API/MediaDevices/getUserMedia)).
-- Frames come from `MediaStreamTrackProcessor`. Where the browser does not provide it, the source reads frames from a canvas
-  instead.
+- Frames require `MediaStreamTrackProcessor` or `HTMLVideoElement.requestVideoFrameCallback`. Where the processor is
+  unavailable, the source reads canvas frames scheduled by `requestVideoFrameCallback`. If neither path is available,
+  the source stops all its tracks and reports `UnsupportedError: Camera frames require MediaStreamTrackProcessor or
+  requestVideoFrameCallback` through `onError`. This prerequisite does not extend the verified browser support below.
 - Web frames arrive as BGRA and are not rotated. Frames from every camera except a back one are mirrored, as in the
   `camera` plugin's own Web preview; a laptop webcam usually has no facing mode, is reported as external and is mirrored too.
 - Native `yuv420` frames with two planes are NV12 (`Y` + interleaved `UV`); three planes are I420 (`Y`, `U`, `V`).
