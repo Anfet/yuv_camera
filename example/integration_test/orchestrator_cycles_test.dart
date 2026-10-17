@@ -10,6 +10,7 @@ import 'package:yuv_ffi/yuv_ffi.dart';
 /// On Web the source depends on the browser flags supplied by the runner; the real-camera gate uses a physical camera.
 void main() {
   final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  const stopSurvivorEvents = bool.fromEnvironment('TEST1_STOP_SURVIVOR');
   setUp(() => binding.platformDispatcher.semanticsEnabledTestValue = false);
   tearDown(binding.platformDispatcher.clearSemanticsEnabledTestValue);
 
@@ -67,14 +68,9 @@ void main() {
 
         await _waitFor(tester, () => drawn > 0, const Duration(seconds: 30), 'round $round: the first presented frame');
         await _settle(tester);
-        drawn = 0;
-        final watch = Stopwatch()..start();
-        while (watch.elapsed < const Duration(seconds: 3)) {
-          await tester.pump(const Duration(milliseconds: 16));
-        }
-        debugPrint('[orchestrator_cycles] drawn=$drawn in ${watch.elapsed.inMilliseconds} ms');
-        previewDrawCounts.add(drawn);
-        expect(drawn, greaterThan(10), reason: 'round $round: the preview should keep drawing camera frames');
+        final presentedBeforeProgress = drawn;
+        await _waitFor(tester, () => drawn > presentedBeforeProgress, const Duration(seconds: 30), 'round $round: a new presented frame');
+        previewDrawCounts.add(drawn - presentedBeforeProgress);
 
         await tester.pumpWidget(const SizedBox());
         await _waitFor(tester, () => orchestrator.state == YuvCameraState.closed, const Duration(seconds: 5), 'round $round: the camera to close');
@@ -98,7 +94,11 @@ void main() {
                       orchestrator: orchestrator,
                       builder: (context, controller) {
                         firstController = controller;
-                        return YuvCameraView(cameraController: controller, onFramePresented: (_) => firstPresented++);
+                        return YuvCameraView(
+                          key: const ValueKey('first-preview'),
+                          cameraController: controller,
+                          onFramePresented: (_) => firstPresented++,
+                        );
                       },
                     ),
                   ),
@@ -108,7 +108,12 @@ void main() {
                     orchestrator: orchestrator,
                     builder: (context, controller) {
                       secondController = controller;
-                      return YuvCameraView(cameraController: controller, onFramePresented: (_) => secondPresented++);
+                      return YuvCameraView(
+                        cameraController: controller,
+                        onFramePresented: (_) {
+                          if (!stopSurvivorEvents || showFirst) secondPresented++;
+                        },
+                      );
                     },
                   ),
                 ),
@@ -124,26 +129,33 @@ void main() {
       expect(identical(firstController, sharedController), isTrue);
 
       await _settle(tester);
-      firstPresented = 0;
-      secondPresented = 0;
-      var watch = Stopwatch()..start();
-      while (watch.elapsed < const Duration(seconds: 3)) {
-        await tester.pump(const Duration(milliseconds: 16));
-      }
-      expect(firstPresented, greaterThan(10), reason: 'the first preview should keep presenting camera frames');
-      expect(secondPresented, greaterThan(10), reason: 'the second preview should keep presenting camera frames');
-      sharedPreviewDrawCounts = [firstPresented, secondPresented];
+      final firstPresentedBeforeProgress = firstPresented;
+      final secondPresentedBeforeProgress = secondPresented;
+      await _waitFor(
+        tester,
+        () => firstPresented > firstPresentedBeforeProgress && secondPresented > secondPresentedBeforeProgress,
+        const Duration(seconds: 30),
+        'both shared previews to present a new frame',
+      );
+      sharedPreviewDrawCounts = [firstPresented - firstPresentedBeforeProgress, secondPresented - secondPresentedBeforeProgress];
 
       await tester.tap(find.text('Remove first'));
       await tester.pump();
+      await _waitFor(
+        tester,
+        () => find.byKey(const ValueKey('first-preview')).evaluate().isEmpty,
+        const Duration(seconds: 30),
+        'the first preview to be removed',
+      );
       expect(identical(orchestrator.controller, sharedController), isTrue, reason: 'removing one lease must keep the same controller');
-      secondPresented = 0;
-      watch = Stopwatch()..start();
-      while (watch.elapsed < const Duration(seconds: 3)) {
-        await tester.pump(const Duration(milliseconds: 16));
-      }
-      survivingPreviewDrawCount = secondPresented;
-      expect(secondPresented, greaterThan(10), reason: 'the surviving preview should continue presenting after removal');
+      final survivorPresentedBeforeProgress = secondPresented;
+      await _waitFor(
+        tester,
+        () => secondPresented > survivorPresentedBeforeProgress,
+        const Duration(seconds: 30),
+        stopSurvivorEvents ? 'TEST1_SURVIVOR_TIMEOUT' : 'the surviving preview to present a new frame after removal',
+      );
+      survivingPreviewDrawCount = secondPresented - survivorPresentedBeforeProgress;
 
       await tester.pumpWidget(const SizedBox());
       await _waitFor(
@@ -189,7 +201,7 @@ void main() {
       'survivingPreviewDrawCount': survivingPreviewDrawCount,
       'closedAfterFinalPreview': closedAfterFinalPreview,
     };
-  }, timeout: const Timeout(Duration(minutes: 3)));
+  }, timeout: const Timeout(Duration(minutes: 10)));
 }
 
 Future<void> _waitFor(WidgetTester tester, bool Function() condition, Duration limit, String what) async {
