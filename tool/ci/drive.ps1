@@ -134,7 +134,12 @@ try {
     Get-Content -LiteralPath $outputFile -Tail 120 | Write-Output
     throw "flutter drive completed for $Target on $Device without All tests passed"
   }
+  if (Select-String -LiteralPath $outputFile -Pattern 'Some tests failed|Failure Details:' -Quiet) {
+    Get-Content -LiteralPath $outputFile -Tail 120 | Write-Output
+    throw "flutter drive reported test failures for $Target on $Device"
+  }
   Write-Output "PASS $Target on $Device"
 } finally {
   if ((Get-Location).Path -eq (Join-Path $repositoryRoot 'example')) { Pop-Location }
+  Remove-Item -LiteralPath $outputFile -Force -ErrorAction SilentlyContinue
 }

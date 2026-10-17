@@ -14,4 +14,5 @@ result=${PIPESTATUS[0]}
 set -e
 if (( result != 0 )); then tail -n 120 "$output_file"; echo "flutter drive failed for $target on $device with exit code $result" >&2; exit "$result"; fi
 if ! grep -Fq 'All tests passed' "$output_file"; then tail -n 120 "$output_file"; echo "flutter drive completed for $target on $device without All tests passed" >&2; exit 1; fi
+if grep -Eq 'Some tests failed|Failure Details:' "$output_file"; then tail -n 120 "$output_file"; echo "flutter drive reported test failures for $target on $device" >&2; exit 1; fi
 echo "PASS $target on $device"
