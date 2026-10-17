@@ -1,5 +1,7 @@
 ## 0.0.1
 
+* Preview imports camera images only after the presenter accepts the frame; frame callbacks retain lazy image access.
+
 * Clarified initialization and preview error context, shader availability reporting and verified support boundaries;
   the README capture thumbnail explicitly contains the whole image.
 

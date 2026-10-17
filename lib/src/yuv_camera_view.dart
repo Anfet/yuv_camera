@@ -127,7 +127,7 @@ class _YuvCameraViewState extends State<YuvCameraView> {
   void _onFrame(YuvCameraFrame frame) {
     _dispatchFrameCallback(frame);
     try {
-      if (_presenter.present(frame.image, orientation: frame.orientation)) {
+      if (_presenter.presentLazy(() => frame.image, orientation: frame.orientation)) {
         _presentedCandidate = frame;
       }
     } catch (error, stack) {

@@ -49,6 +49,44 @@ void main() {
     source.dispose();
   });
 
+  test('an orientation failure stops once without escaping the zone and a healthy controller still delivers', () async {
+    debugDefaultTargetPlatformOverride = TargetPlatform.android;
+    final invalid = CameraController(
+      const CameraDescription(name: 'invalid-orientation', lensDirection: CameraLensDirection.back, sensorOrientation: 45),
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
+    await invalid.initialize();
+    final errors = <Object>[];
+    final zoneErrors = <Object>[];
+    final frames = <YuvCameraFrame>[];
+    final source = YuvCameraFrameSource(invalid, onFrame: frames.add, onError: errors.add);
+    await runZonedGuarded(() async {
+      await source.start();
+      platform.emit(invalid.cameraId, cameraFrame(12));
+      await Future<void>.delayed(Duration.zero);
+      platform.emit(invalid.cameraId, cameraFrame(13));
+      source.stop();
+      source.dispose();
+      await Future<void>.delayed(Duration.zero);
+    }, (error, stack) => zoneErrors.add(error));
+
+    expect(errors.single, isA<StateError>());
+    expect(frames, isEmpty);
+    expect(platform.cancels, [invalid.cameraId]);
+    expect(platform.isStreaming(invalid.cameraId), isFalse);
+    expect(zoneErrors, isEmpty);
+    await invalid.dispose();
+
+    final healthySource = YuvCameraFrameSource(controller, onFrame: frames.add, onError: errors.add);
+    await healthySource.start();
+    platform.emit(controller.cameraId, cameraFrame(14));
+    await Future<void>.delayed(Duration.zero);
+    expect(frames, hasLength(1));
+    expect(errors, hasLength(1));
+    healthySource.dispose();
+  });
+
   test('rejects a native controller whose external image stream is already active', () async {
     controller.value = controller.value.copyWith(isStreamingImages: true);
     final errors = <Object>[];

@@ -95,6 +95,90 @@ void main() {
     await replacement.dispose();
   });
 
+  testWidgets('busy preview leaves the frame snapshot lazy and the next accepted frame paints', (tester) async {
+    final frames = <YuvCameraFrame>[];
+    final controller = YuvCameraViewController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: YuvCameraView(cameraController: camera, viewController: controller, onFrameInterval: Duration.zero, onFrame: frames.add),
+      ),
+    );
+    await settleCamera(tester);
+
+    final presenter = tester.widget<YuvFrameView>(find.byType(YuvFrameView)).presenter;
+    YuvImage? firstCapture;
+    controller.capture().then((image) => firstCapture = image);
+    platform.emit(camera.cameraId, cameraFrame(41));
+    await tester.pump();
+    expect(presenter.isBusy, isTrue);
+
+    final rejected = cameraFrame(42);
+    platform.emit(camera.cameraId, rejected);
+    await tester.pump();
+    expect(frames, hasLength(2));
+    expect(presenter.isBusy, isTrue);
+    expect(firstCapture, isNull);
+
+    // Mutate only fake input: a rejected preview must not have taken its snapshot yet.
+    final bytes = rejected.planes.single.bytes;
+    for (final shade in [52, 62]) {
+      for (var offset = 0; offset < bytes.length; offset += 4) {
+        bytes[offset] = shade;
+        bytes[offset + 1] = shade;
+        bytes[offset + 2] = shade;
+      }
+      expect(shadeOfYuv(frames[1].image), 52);
+    }
+
+    await pumpUntil(tester, () => firstCapture != null, reason: 'first frame paint');
+    if (firstCapture case final image?) expect(shadeOfYuv(image), 41);
+
+    YuvImage? nextCapture;
+    controller.capture().then((image) => nextCapture = image);
+    platform.emit(camera.cameraId, cameraFrame(43));
+    await pumpUntil(tester, () => nextCapture != null, reason: 'next accepted frame paint');
+    expect(frames, hasLength(3));
+    if (nextCapture case final image?) expect(shadeOfYuv(image), 43);
+  });
+
+  testWidgets('onFrame can import an image while its preview is rejected during decoding', (tester) async {
+    final shades = <int>[];
+    final controller = YuvCameraViewController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: YuvCameraView(
+          cameraController: camera,
+          viewController: controller,
+          onFrameInterval: Duration.zero,
+          onFrame: (frame) => shades.add(shadeOfYuv(frame.image)),
+        ),
+      ),
+    );
+    await settleCamera(tester);
+
+    final presenter = tester.widget<YuvFrameView>(find.byType(YuvFrameView)).presenter;
+    YuvImage? firstCapture;
+    controller.capture().then((image) => firstCapture = image);
+    platform.emit(camera.cameraId, cameraFrame(41));
+    await tester.pump();
+    expect(presenter.isBusy, isTrue);
+
+    platform.emit(camera.cameraId, cameraFrame(42));
+    await tester.pump();
+    expect(shades, [41, 42]);
+    await pumpUntil(tester, () => firstCapture != null, reason: 'first frame paint');
+    if (firstCapture case final image?) expect(shadeOfYuv(image), 41);
+
+    YuvImage? nextCapture;
+    controller.capture().then((image) => nextCapture = image);
+    platform.emit(camera.cameraId, cameraFrame(43));
+    await pumpUntil(tester, () => nextCapture != null, reason: 'next accepted frame paint');
+    expect(shades, [41, 42, 43]);
+    if (nextCapture case final image?) expect(shadeOfYuv(image), 43);
+  });
+
   testWidgets('an unsupported image format group stops the stream and shows the error', (tester) async {
     await pumpView(tester);
     platform.emit(camera.cameraId, nv21Frame());

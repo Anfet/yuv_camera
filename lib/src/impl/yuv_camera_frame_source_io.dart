@@ -71,13 +71,18 @@ final class YuvCameraFrameSourceImpl implements YuvCameraFrameSource {
       );
       return;
     }
-    final platform = _platform();
-    final orientation = cameraFrameOrientation(
-      platform: platform,
-      lensDirection: controller.description.lensDirection,
-      sensorOrientation: controller.description.sensorOrientation,
-      deviceOrientation: controller.value.deviceOrientation,
-    );
+    late final YuvFrameOrientation orientation;
+    try {
+      orientation = cameraFrameOrientation(
+        platform: _platform(),
+        lensDirection: controller.description.lensDirection,
+        sensorOrientation: controller.description.sensorOrientation,
+        deviceOrientation: controller.value.deviceOrientation,
+      );
+    } catch (error) {
+      _fail(error, generation);
+      return;
+    }
     onFrame(
       YuvCameraFrame(
         width: image.width,
