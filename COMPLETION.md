@@ -8,6 +8,10 @@
 
 Одна строка на завершённую задачу пакета. Карточки и вердикты удалённых карточек доступны в истории group checkout `D:\.projects\yuv`.
 
+## 17.10.2026
+
+- **COMPAT 3** — DONE (ACCEPTED, R82 Review 1, 17.10.2026). Reviewed yuv_camera `6bd4db65e083c5d336ddec49000d01e47fe6845b`, paired yuv_ffi `af59332992b645e985e59450fcc6fda0df68177c`. Local-only consumer fixture `tasks/0.5.2/fixtures/COMPAT-3/` covers public camera frame/orientation/controller API and compile-ready view/lease composition. `prepare.ps1 -ValidateOnly` exit 0; minimum-SDK, runtime and physical camera remain CHECK 21. CI: none (D-38).
+
 ## 15.10.2026
 
 - **WIKI 2** — DONE (ACCEPTED, Review 1, R30). Reviewed group `59829092018caec6f28905e01b3089cea0757219`, base `f8e25aebecb71a0470e8b9dcaf5a2d12058ce36b`; camera source `d1c86c9ba37f9812a2d6aecefdd2f8a550cfc03d`, wiki `17d4a143b7ea4e38e1017d73cc5f33a63444bcbe`. Four wiki pages refreshed with the separately authorized non-force push (exit 0); 9/9 managed Markdown blobs equal final source, diffs/missing/extra 0, wiki HEAD equals origin/master per Executor Report. Across both wikis 54 URLs: 53 HTTP 200, expected pre-REL 2 camera API HTTP 404. Versions unchanged; no package refs/tags/Releases/pub.dev changes. Blocking findings: none; Recommendations: none; Reviewer checks: none. Full Report/Review retained in group validation manifest and Git history. Completion-only acceptance does not change runtime/docs payload.
