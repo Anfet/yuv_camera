@@ -96,3 +96,10 @@ For local paired development from Git checkouts, use ignored `pubspec_overrides.
 run `tool/check_pair.ps1` for an exact pair. These checks validate that local pair only. To check a hosted release, remove
 the overrides, run `flutter pub get`, and confirm that `.dart_tool/package_config.json` resolves both packages from
 `hosted/pub.dev`.
+
+## Preview host and shader reporting
+
+Await `YuvFfi.initialize()` in each isolate before image processing or capture. Host previews in standard Flutter
+text and theme context, normally `MaterialApp` / `Scaffold`; stream errors show English `Camera error: ...` text.
+`onFramePresented(bool)` reports a drawn frame and shader availability. A `true` flag does not establish shader paint:
+BGRA and unsupported/gapped layouts can use fallback. Device check JSON schema 1 uses the same meaning for `shader`.

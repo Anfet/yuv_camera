@@ -58,6 +58,9 @@ final class DeviceCheckStepResult {
   final bool skipped;
   final double seconds;
   final double? displayFps;
+
+  /// Shader availability when a frame was presented; JSON schema 1 retains this field.
+  /// A true value does not prove shader paint: BGRA or unsupported layouts can use fallback.
   final bool? shader;
   final int? rotation;
   final bool? mirrored;

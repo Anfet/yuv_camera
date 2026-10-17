@@ -142,3 +142,10 @@ denied or no camera exists, the screen shows a one-line message instead of a pre
 - [Preview and capture](https://github.com/Anfet/yuv_camera/wiki/Preview-and-capture): capture, switch cameras, dispose in the right order.
 - [Frame processing](https://github.com/Anfet/yuv_camera/wiki/Frame-processing): do something with each frame.
 - [yuv_ffi Getting started](https://github.com/Anfet/yuv_ffi/wiki/Getting-started): what you can do with the images the camera delivers.
+
+## Host context
+
+The examples use `MaterialApp` / `Scaffold` to supply Flutter text direction, text style and theme context.
+Stream failures in `YuvCameraView` and `YuvTransformView` show English `Camera error: ...` text.
+Await `YuvFfi.initialize()` in the isolate before processing, capture or Web image work; initialize each worker isolate too.
+Adding a desktop provider enables discovery but is not evidence of verified physical capture on every desktop.

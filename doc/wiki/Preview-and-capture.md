@@ -47,7 +47,7 @@ has the same policy as `CameraPreview`.
 | `onFrame`, `onFrameInterval` | Your frame callback and its minimum interval (200 ms by default). See [Frame processing](https://github.com/Anfet/yuv_camera/wiki/Frame-processing). |
 | `overlayBuilder` | Builds a widget over the preview from the geometry of the displayed frame. See [Geometry and overlays](https://github.com/Anfet/yuv_camera/wiki/Geometry-and-overlays). |
 | `onStreamStopped` | Called only after a stream error stops the stream; not on removal or controller replacement. |
-| `onFramePresented` | Called for every frame that was confirmed as drawn; its argument says whether the shader path is in use. |
+| `onFramePresented` | Called for every frame that was confirmed as drawn; its argument reports shader availability (`YuvFramePresenter.hasShader`), not whether that frame used shader paint. BGRA and unsupported/gapped layouts can use fallback while the flag is `true`. |
 
 On native platforms the YUV source owns the controller's image stream. Do not call `startImageStream`, start video
 recording with an `onAvailable` callback, or subscribe directly to platform frames while it is active. If the controller
@@ -280,3 +280,6 @@ project has not run camera switching on a physical camera, so test it on your ta
 - [Frame processing](https://github.com/Anfet/yuv_camera/wiki/Frame-processing): handle frames before they are captured.
 - [Geometry and overlays](https://github.com/Anfet/yuv_camera/wiki/Geometry-and-overlays): the geometry behind the visible area.
 - [yuv_ffi: Displaying images](https://github.com/Anfet/yuv_ffi/wiki/Displaying-images): show or keep a captured `YuvImage`.
+
+`onFramePresented` and Device check JSON `shader` retain their existing signatures and schema. A true value means
+the shader is loaded and available; it is not renderer-path telemetry for that frame.

@@ -7,7 +7,14 @@ import 'package:yuv_camera/src/yuv_camera_frame.dart';
 import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
 import 'package:yuv_camera/src/yuv_camera_view_controller.dart';
 
-/// Shader-backed camera preview with independent, throttled frame processing.
+/// Camera preview with optional shader rendering and independent, throttled frame processing.
+///
+/// Await `YuvFfi.initialize()` in the current isolate before Web image work,
+/// capture, orientation conversion or capability-gated processing. Initialize
+/// separately in each worker isolate used for processing.
+/// A stream error replaces the preview with English `Camera error: ...` text.
+/// Provide Flutter text direction, text style and theme context; a typical host
+/// is `MaterialApp` with a `Scaffold`.
 ///
 /// Heavy synchronous work in [onFrame] still blocks the UI isolate and stops
 /// painting; use an isolate when the operation supports it.
@@ -57,7 +64,9 @@ class YuvCameraView extends StatefulWidget {
   /// Not called when the view is removed or given another controller.
   final VoidCallback? onStreamStopped;
 
-  /// Reports each frame confirmed as drawn; the flag is [YuvFramePresenter.hasShader] for that frame.
+  /// Reports each frame confirmed as drawn; the flag is [YuvFramePresenter.hasShader].
+  /// It means the shader is loaded and available, not that it painted this frame.
+  /// BGRA and unsupported/gapped layouts can use fallback while the flag is `true`.
   final ValueChanged<bool>? onFramePresented;
 
   @override

@@ -168,3 +168,12 @@ strict Content-Security-Policy for the `yuv_ffi` WebAssembly module, and static 
 - [Getting started](https://github.com/Anfet/yuv_camera/wiki/Getting-started): the first working preview.
 - [Frame processing](https://github.com/Anfet/yuv_camera/wiki/Frame-processing): throttling and heavy work.
 - [yuv_ffi: Platforms and troubleshooting](https://github.com/Anfet/yuv_ffi/wiki/Platforms-and-troubleshooting): initialization, native library and Web module errors.
+
+## Verification boundaries
+
+The declared Flutter floor is 3.44.0; recorded release validation used Flutter 3.44.9, so it does not independently
+verify the minimum SDK. Safari, Firefox and mobile Web are unverified. Custom asset placement, CDN hosting and strict
+CSP for the WASM module, and static CocoaPods linkage, remain unverified.
+Camera Web evidence covers Chrome JavaScript; camera `--wasm` is not claimed. A desktop camera provider does not
+prove physical capture support. Physical iPhone NV12 front/back preview and capture evidence does not establish
+separate NV12 landscape or mirror support.

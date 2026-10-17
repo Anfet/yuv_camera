@@ -6,6 +6,12 @@ import 'package:yuv_camera/src/yuv_camera_frame_source.dart';
 
 /// Camera preview whose accepted frames are synchronously transformed first.
 ///
+/// Await `YuvFfi.initialize()` in the current isolate before starting a transform
+/// that performs image operations; worker isolates must initialize separately.
+/// A stream error replaces the preview with English `Camera error: ...` text.
+/// Provide Flutter text direction, text style and theme context, normally through
+/// `MaterialApp` and `Scaffold`.
+///
 /// [transform] must return an upright image. The view copies the returned image
 /// for drawing; copy a delivered frame image before mutating it.
 class YuvTransformView extends StatefulWidget {

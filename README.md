@@ -128,7 +128,7 @@ class _CameraPageState extends State<CameraPage> {
           if (_captured case final image?)
             Align(
               alignment: Alignment.topRight,
-              child: SizedBox(width: 120, height: 160, child: YuvImageWidget(image: image)),
+              child: SizedBox(width: 120, height: 160, child: YuvImageWidget(image: image, boxFit: BoxFit.contain)),
             ),
         ],
       ),
@@ -332,3 +332,12 @@ the Windows and Web targets, and removes its overrides afterwards. It never swit
 ## License
 
 MIT, see [LICENSE](LICENSE).
+
+## Verification boundaries
+
+The declared Flutter floor is 3.44.0; recorded release validation used Flutter 3.44.9, so it does not independently
+verify the minimum SDK. Safari, Firefox and mobile Web are unverified. Custom asset placement, CDN hosting and strict
+CSP for the WASM module, and static CocoaPods linkage, remain unverified.
+Camera Web evidence covers Chrome JavaScript; camera `--wasm` is not claimed. A desktop camera provider does not
+prove physical capture support. Physical iPhone NV12 front/back preview and capture evidence does not establish
+separate NV12 landscape or mirror support.

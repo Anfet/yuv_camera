@@ -396,6 +396,7 @@ class _DeviceCheckScreenState extends State<DeviceCheckScreen> {
 
   DeviceCheckStepResult _emptyResult({String? capture}) => DeviceCheckStepResult(id: _stepId, skipped: false, seconds: 0, capture: capture);
 
+  // The JSON shader field records shader availability, not the paint path of this frame.
   void _onFramePresented(bool shader) {
     final camera = _camera;
     final geometry = _viewController.geometry.value;

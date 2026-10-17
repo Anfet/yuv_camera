@@ -1,5 +1,8 @@
 ## 0.0.1
 
+* Clarified initialization and preview error context, shader availability reporting and verified support boundaries;
+  the README capture thumbnail explicitly contains the whole image.
+
 * Web frame sources stop their tracks and report `UnsupportedError` when neither frame processor nor video-frame callback is available.
 
 * Web frame sources cancel each reader once, handle cancellation rejection, and drain pending teardown across restarts.

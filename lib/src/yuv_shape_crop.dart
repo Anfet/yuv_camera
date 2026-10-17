@@ -82,7 +82,7 @@ extension YuvShapeCrop on YuvImage {
   /// [YuvShapedImage.toBgraBytes]. Points inside never change. For I420 and NV12 a chroma sample is painted only
   /// when all the points it covers (up to 2x2) are outside the shape; otherwise it keeps the color of the image.
   ///
-  /// This image is left unchanged. Needs a `YuvFfi.initialize()` that has completed, like any other crop. Throws an
+  /// This image is left unchanged. Await `YuvFfi.initialize()` in the current isolate before cropping. Throws an
   /// [ArgumentError] when [target] is invalid for this image (see [YuvCropTarget.place]).
   YuvShapedImage croppedToShape(YuvCropTarget target, {YuvCropShape shape = YuvCropShape.rectangle, Color fill = const Color(0xFF000000)}) {
     final region = target.place(size);
