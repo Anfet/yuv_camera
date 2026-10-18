@@ -1,5 +1,8 @@
 ## 0.0.1
 
+* Clarified Flutter support: the declared minimum remains 3.44.0; 3.44.9 is officially tested and supported.
+  Earlier 3.44.x patch releases may work, but have not been verified.
+
 * Preview imports camera images only after the presenter accepts the frame; frame callbacks retain lazy image access.
 
 * Clarified initialization and preview error context, shader availability reporting and verified support boundaries;

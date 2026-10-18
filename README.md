@@ -29,7 +29,8 @@ dependencies:
   camera_desktop: ^2.0.0
 ```
 
-Requirements: Dart `^3.12.0`, Flutter `>=3.44.0`. `yuv_camera` requires
+Requirements: Dart `^3.12.0`, Flutter `>=3.44.0`; officially tested and supported with Flutter 3.44.9.
+`yuv_camera` requires
 `yuv_ffi: ^0.5.2` and declares compatibility with `camera` versions
 `>=0.12.1 <0.13.0`. Physical Android preview is verified with `camera`
 0.12.1. The earlier `camera` 0.11.0+2 / CameraX 0.6.30 combination produced
@@ -335,8 +336,10 @@ MIT, see [LICENSE](LICENSE).
 
 ## Verification boundaries
 
-The declared Flutter floor is 3.44.0; recorded release validation used Flutter 3.44.9, so it does not independently
-verify the minimum SDK. Safari, Firefox and mobile Web are unverified. Custom asset placement, CDN hosting and strict
+The package allows Flutter 3.44.0 or later. Flutter 3.44.9 is the officially tested and supported version.
+Earlier Flutter 3.44.x patch releases may work, but have not been verified.
+
+Safari, Firefox and mobile Web are unverified. Custom asset placement, CDN hosting and strict
 CSP for the WASM module, and static CocoaPods linkage, remain unverified.
 Camera Web evidence covers Chrome JavaScript; camera `--wasm` is not claimed. A desktop camera provider does not
 prove physical capture support. Physical iPhone NV12 front/back preview and capture evidence does not establish
