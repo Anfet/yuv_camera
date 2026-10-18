@@ -912,13 +912,18 @@ void main() {
       platform.emit(camera.cameraId, cameraFrame(10));
       await tester.pump();
       expect(shades, [10]);
+      var presenter = tester.widget<YuvFrameView>(find.byType(YuvFrameView)).presenter;
+      expect(presenter.isBusy, isTrue);
+      await pumpUntil(tester, () => !presenter.isBusy, reason: 'the initial replacement-test frame to finish decoding and paint');
       final replacement = CameraController(camera.description, ResolutionPreset.medium, enableAudio: false);
       await replacement.initialize();
       await pumpCamera(replacement);
       expect(stopped, 0);
+      presenter = tester.widget<YuvFrameView>(find.byType(YuvFrameView)).presenter;
       platform.emit(camera.cameraId, cameraFrame(11));
       platform.emit(replacement.cameraId, cameraFrame(12));
       await tester.pump();
+      await pumpUntil(tester, () => !presenter.isBusy, reason: 'the replacement frame to finish decoding and paint');
       expect(shades, [10, 12]);
       await tester.pumpWidget(const SizedBox());
       expect(stopped, 0);
