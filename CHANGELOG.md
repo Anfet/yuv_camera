@@ -1,12 +1,13 @@
 ## 0.0.1
 
-* Clarified Flutter support: the declared minimum remains 3.44.0; 3.44.9 is officially tested and supported.
-  Earlier 3.44.x patch releases may work, but have not been verified.
+* The minimum Flutter version is 3.44.0; 3.44.9 is the officially tested and supported version. Other 3.44.x patch
+  releases have not been verified.
 
-* Preview imports camera images only after the presenter accepts the frame; frame callbacks retain lazy image access.
+* Preview frame pixels are imported only after the presenter accepts a frame. `onFrame` can process the camera stream
+  independently, including while the preview is busy.
 
-* Clarified initialization and preview error context, shader availability reporting and verified support boundaries;
-  the README capture thumbnail explicitly contains the whole image.
+* Stream failures are reported through `onStreamStopped`; shader availability does not guarantee that each frame uses
+  shader paint, and unsupported or gapped layouts may use the BGRA fallback. Capture thumbnails show the whole image.
 
 * Web frame sources stop their tracks and report `UnsupportedError` when neither frame processor nor video-frame callback is available.
 
