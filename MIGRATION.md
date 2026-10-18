@@ -1,4 +1,4 @@
-# Migrating the yuv_ffi example camera code to yuv_camera 0.0.1
+# Migrating the yuv_ffi example camera code to yuv_camera 0.1.0
 
 `yuv_ffi 0.5.2` keeps its public image API. Its example no longer contains the camera layer or the ML Kit demo;
 these now live in `yuv_camera`. This guide is for applications that copied that example code. Image-only applications

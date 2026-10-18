@@ -288,11 +288,34 @@ against exact commits. From the package root of a Git checkout:
   iOS 18.7, front camera, portrait and landscape.
 
 A build or a passing emulator or fake-stream target does not prove that a
-physical camera works on that platform. Other platforms, browsers (including
-Safari and Firefox), mobile browsers, `--wasm` builds, other devices and OS versions are not claimed.
-The Web evidence is the Windows Chrome JavaScript build served in the default Flutter layout; a custom `assetBase`,
-a CDN or a strict Content-Security-Policy for the `yuv_ffi` WebAssembly module, and static CocoaPods linkage on
-iOS and macOS (see the `yuv_ffi` README), have not been verified.
+physical camera works on that platform. Physical-camera claims remain limited to the named devices, modes and scenarios.
+
+Additional physical preview/capture and stop/dispose consumer scenarios passed with Flutter 3.44.9:
+
+| Browser / device | Checked build and scope |
+| --- | --- |
+| Firefox 143 on Windows | JavaScript, external webcam. |
+| Safari 18.6 on macOS 15.6.1 | JavaScript, External-camera fixture only; no front/back lens claim. |
+| Chrome on a Pixel 3 | JavaScript over HTTPS; the scenario passed, but the operator observed low speed and no speed threshold was defined. |
+| Safari on an iPhone 11 | JavaScript over HTTPS. |
+
+These are bounded consumer observations, not a complete browser conformance or image-operation parity matrix.
+Camera `--wasm`, Safari/Firefox WASM and other browser/device configurations remain outside the support claims.
+
+The standard Chrome scenarios use the default Flutter asset layout. General public `assetBase`/CDN/CSP support is not
+established by internal-loader experiments. Static CocoaPods camera runtime remains unverified; the FFI-only static
+Firebase consumer in the `yuv_ffi` README does not establish camera capture support.
+
+## Known observation: Chrome VideoFrame warning
+
+Chrome 155 on Windows with Flutter 3.44.9, JavaScript/CanvasKit, can report a `VideoFrame` collected without an explicit
+close during camera teardown/reopening. Physical start/capture/stop/reopen scenarios passed, and the observed camera
+frames were closed. The cause and owner remain unknown; this does not prove the absence of a package defect or a leak,
+and no fix is claimed. The observation is retained for this release.
+
+The [investigation and preserved evidence](https://github.com/Anfet/yuv_camera/blob/main/doc/evidence/M2/README.md)
+record eight diagnostic/control runs and their limits. Revisit it for a reproducible stall/capture failure, confirmed
+resource accumulation or a proven missed-close path; recurrence of the warning alone does not establish one.
 
 ## Learn more
 
@@ -339,8 +362,8 @@ MIT, see [LICENSE](LICENSE).
 The package allows Flutter 3.44.0 or later. Flutter 3.44.9 is the officially tested and supported version.
 Earlier Flutter 3.44.x patch releases may work, but have not been verified.
 
-Safari, Firefox and mobile Web are unverified. Custom asset placement, CDN hosting and strict
-CSP for the WASM module, and static CocoaPods linkage, remain unverified.
-Camera Web evidence covers Chrome JavaScript; camera `--wasm` is not claimed. A desktop camera provider does not
-prove physical capture support. Physical iPhone NV12 front/back preview and capture evidence does not establish
+Web evidence includes Chrome JavaScript and the limited Firefox/Safari/mobile JavaScript consumer scenarios listed
+above. It does not establish support for every browser or device. General public custom asset placement/CDN/strict-CSP
+support and static CocoaPods camera runtime remain unverified. Camera `--wasm` is not claimed.
+A desktop camera provider does not prove physical capture support. Physical iPhone NV12 front/back preview and capture evidence does not establish
 separate NV12 landscape or mirror support.

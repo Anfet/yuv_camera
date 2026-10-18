@@ -1,0 +1,1550 @@
+[
+  {
+    "run": "baseline",
+    "originalSha256": "618b4fa405d2dae94c1288d4b74121e29d720130a691ff5a2162c94150509911",
+    "exit": 0,
+    "runnerException": null,
+    "physicalCamera": true,
+    "fakeVideo": false,
+    "browserVersion": "155.0.8059.84",
+    "elapsedSeconds": 78.91,
+    "consoleExcerpt": [
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792337935488,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Start: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792337935488,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Capture: 720x480\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792337935489,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Stop: tracks ended; quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792337935489,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Start: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792337935489,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Restart: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792337935489,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Stop: tracks ended; quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792337935489,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Dispose: quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792337935489,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"SCENARIO PASS\""
+      },
+      {
+        "phase": "console",
+        "level": "SEVERE",
+        "source": "javascript",
+        "timestamp": 1792337935489,
+        "message": "http://localhost:8092/ - A VideoFrame was garbage collected without being closed. Applications should call close() on frames when done with them to prevent stalls."
+      }
+    ],
+    "frameCounters": [],
+    "frameObservations": []
+  },
+  {
+    "run": "instrumented",
+    "originalSha256": "eb13162945132ebe6744660f31381d67998223ad8aa2e22280be0868a4c18718",
+    "exit": 0,
+    "runnerException": null,
+    "physicalCamera": true,
+    "fakeVideo": false,
+    "browserVersion": "155.0.8059.84",
+    "elapsedSeconds": 78.99,
+    "consoleExcerpt": [
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338026242,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Start: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338026242,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Capture: 720x480\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338026242,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Stop: tracks ended; quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338026242,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Start: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338026242,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Restart: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338026242,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Stop: tracks ended; quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338026242,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Dispose: quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338026242,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"SCENARIO PASS\""
+      },
+      {
+        "phase": "console",
+        "level": "SEVERE",
+        "source": "javascript",
+        "timestamp": 1792338026242,
+        "message": "http://localhost:8092/ - A VideoFrame was garbage collected without being closed. Applications should call close() on frames when done with them to prevent stalls."
+      }
+    ],
+    "frameCounters": [
+      {
+        "kind": "close-only",
+        "closeCallsPerFrame": 1,
+        "count": 1
+      },
+      {
+        "kind": "constructor",
+        "closeCallsPerFrame": 1,
+        "count": 2
+      },
+      {
+        "kind": "read",
+        "closeCallsPerFrame": 1,
+        "count": 3
+      }
+    ],
+    "frameObservations": [
+      {
+        "id": 1,
+        "kind": "constructor",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 2,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 3,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 4,
+        "kind": "constructor",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 5,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 6,
+        "kind": "close-only",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      }
+    ]
+  },
+  {
+    "run": "control",
+    "originalSha256": "2d9bd9af1068c520b0eefcc09996f02960df5493511d1fa6b5f8ea52a4d63549",
+    "exit": 0,
+    "runnerException": null,
+    "physicalCamera": true,
+    "fakeVideo": false,
+    "browserVersion": "155.0.8059.84",
+    "elapsedSeconds": 36.48,
+    "consoleExcerpt": [],
+    "frameCounters": [
+      {
+        "kind": "read",
+        "closeCallsPerFrame": 1,
+        "count": 20
+      }
+    ],
+    "frameObservations": [
+      {
+        "id": 1,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 2,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 3,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 4,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 5,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 6,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 7,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 8,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 9,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 10,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 11,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 12,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 13,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 14,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 15,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 16,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 17,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 18,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 19,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 20,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      }
+    ],
+    "controlOutcome": {
+      "errors": [],
+      "cycles": [
+        {
+          "count": 10,
+          "ended": "ended"
+        },
+        {
+          "count": 10,
+          "ended": "ended"
+        }
+      ]
+    }
+  },
+  {
+    "run": "instrumented2",
+    "originalSha256": "a2a6f7cfc0fe06e98493abec09793150313a0ee40c32b5923733c55ee3f7d199",
+    "exit": 0,
+    "runnerException": null,
+    "physicalCamera": true,
+    "fakeVideo": false,
+    "browserVersion": "155.0.8059.84",
+    "elapsedSeconds": 79.46,
+    "consoleExcerpt": [
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338158665,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Start: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338158666,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Capture: 720x480\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338158666,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Stop: tracks ended; quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338158666,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Start: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338158666,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Restart: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338158666,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Stop: tracks ended; quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338158666,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Dispose: quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338158666,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"SCENARIO PASS\""
+      },
+      {
+        "phase": "console",
+        "level": "SEVERE",
+        "source": "javascript",
+        "timestamp": 1792338158666,
+        "message": "http://localhost:8092/ - A VideoFrame was garbage collected without being closed. Applications should call close() on frames when done with them to prevent stalls."
+      }
+    ],
+    "frameCounters": [
+      {
+        "kind": "constructor",
+        "closeCallsPerFrame": 1,
+        "count": 2
+      },
+      {
+        "kind": "ImageDecoder",
+        "closeCallsPerFrame": 0,
+        "count": 1
+      },
+      {
+        "kind": "ImageDecoder",
+        "closeCallsPerFrame": 1,
+        "count": 1
+      },
+      {
+        "kind": "read",
+        "closeCallsPerFrame": 1,
+        "count": 3
+      }
+    ],
+    "frameObservations": [
+      {
+        "id": 1,
+        "kind": "constructor",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 2,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 3,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 4,
+        "kind": "ImageDecoder",
+        "closed": 0,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 5,
+        "kind": "constructor",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 6,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 7,
+        "kind": "ImageDecoder",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      }
+    ]
+  },
+  {
+    "run": "flutter-control",
+    "originalSha256": "1ac6cb94af77be02bf9cdfe7effd891b5acd2b46d6f82d9249c696c911e0bee3",
+    "exit": 0,
+    "runnerException": null,
+    "physicalCamera": false,
+    "fakeVideo": false,
+    "browserVersion": "155.0.8059.84",
+    "elapsedSeconds": 54.87,
+    "consoleExcerpt": [
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338222442,
+        "message": "http://localhost:8092/main.dart.js 24380:44 \"CONTROL PASS: 4 decoded images disposed, no YUV/camera\""
+      }
+    ],
+    "frameCounters": [
+      {
+        "kind": "ImageDecoder",
+        "closeCallsPerFrame": 1,
+        "count": 4
+      }
+    ],
+    "frameObservations": [
+      {
+        "id": 1,
+        "kind": "ImageDecoder",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 2,
+        "kind": "ImageDecoder",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 3,
+        "kind": "ImageDecoder",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 4,
+        "kind": "ImageDecoder",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      }
+    ]
+  },
+  {
+    "run": "control-paced",
+    "originalSha256": "952badfd5642f1d7c6e600baee46ab97ae31f4901b0bfe9363cbbbeac9b6e8e6",
+    "exit": 0,
+    "runnerException": null,
+    "physicalCamera": true,
+    "fakeVideo": false,
+    "browserVersion": "155.0.8059.84",
+    "elapsedSeconds": 40.26,
+    "consoleExcerpt": [],
+    "frameCounters": [
+      {
+        "kind": "read",
+        "closeCallsPerFrame": 1,
+        "count": 60
+      }
+    ],
+    "frameObservations": [
+      {
+        "id": 1,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 2,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 3,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 4,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 5,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 6,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 7,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 8,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 9,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 10,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 11,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 12,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 13,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 14,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 15,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 16,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 17,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 18,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 19,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 20,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 21,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 22,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 23,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 24,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 25,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 26,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 27,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 28,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 29,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 30,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 31,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 32,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 33,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 34,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 35,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 36,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 37,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 38,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 39,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 40,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 41,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 42,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 43,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 44,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 45,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 46,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 47,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 48,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 49,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 50,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 51,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 52,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 53,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 54,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 55,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 56,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 57,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 58,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 59,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      },
+      {
+        "id": 60,
+        "kind": "read",
+        "closed": 1,
+        "collected": null,
+        "alive": null,
+        "codedWidth": null
+      }
+    ],
+    "controlOutcome": {
+      "errors": [],
+      "cycles": [
+        {
+          "count": 30,
+          "ended": "ended"
+        },
+        {
+          "count": 30,
+          "ended": "ended"
+        }
+      ]
+    }
+  },
+  {
+    "run": "instrumented3",
+    "originalSha256": "2b063c23ccc501865674ad70ef3ebd807aa86e41c74bb806a17ca404224d5dd3",
+    "exit": 0,
+    "runnerException": null,
+    "physicalCamera": true,
+    "fakeVideo": false,
+    "browserVersion": "155.0.8059.84",
+    "elapsedSeconds": 79.03,
+    "consoleExcerpt": [
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338385775,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Start: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338385775,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Capture: 720x480\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338385775,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Stop: tracks ended; quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338385775,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Start: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338385775,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Restart: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338385775,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Stop: tracks ended; quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338385775,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"Dispose: quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338385775,
+        "message": "http://localhost:8092/main.dart.js 90784:36 \"SCENARIO PASS\""
+      },
+      {
+        "phase": "console",
+        "level": "SEVERE",
+        "source": "javascript",
+        "timestamp": 1792338385775,
+        "message": "http://localhost:8092/ - A VideoFrame was garbage collected without being closed. Applications should call close() on frames when done with them to prevent stalls."
+      }
+    ],
+    "frameCounters": [
+      {
+        "kind": "constructor",
+        "closeCallsPerFrame": 1,
+        "count": 2
+      },
+      {
+        "kind": "ImageDecoder",
+        "closeCallsPerFrame": 0,
+        "count": 1
+      },
+      {
+        "kind": "ImageDecoder",
+        "closeCallsPerFrame": 1,
+        "count": 1
+      },
+      {
+        "kind": "read",
+        "closeCallsPerFrame": 1,
+        "count": 3
+      }
+    ],
+    "frameObservations": [
+      {
+        "id": 1,
+        "kind": "constructor",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      },
+      {
+        "id": 2,
+        "kind": "read",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      },
+      {
+        "id": 3,
+        "kind": "ImageDecoder",
+        "closed": 0,
+        "collected": false,
+        "alive": true,
+        "codedWidth": 720
+      },
+      {
+        "id": 4,
+        "kind": "read",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      },
+      {
+        "id": 5,
+        "kind": "constructor",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      },
+      {
+        "id": 6,
+        "kind": "read",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      },
+      {
+        "id": 7,
+        "kind": "ImageDecoder",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      }
+    ]
+  },
+  {
+    "run": "gap10",
+    "originalSha256": "b58c3d80d7a9e7a594196c7425394a9338e1d11f8e1d661950fd46a8f78b3550",
+    "exit": 0,
+    "runnerException": null,
+    "physicalCamera": true,
+    "fakeVideo": false,
+    "browserVersion": "155.0.8059.84",
+    "elapsedSeconds": 93.96,
+    "consoleExcerpt": [
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819635,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=13057.5 TIMING controller.initialize ms=874\""
+      },
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819635,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=13186.6 TIMING source.start ms=128\""
+      },
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819635,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=13367.3 TIMING start-to-first-frame ms=3136\""
+      },
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819635,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=13367.5 Start: new frame within 30 s\""
+      },
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819635,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=13493.1 Capture: 720x480\""
+      },
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819636,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=13512.4 TIMING source dispose+drain ms=17\""
+      },
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819636,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=13514.2 TIMING controller.dispose ms=1\""
+      },
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819636,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=13514.7 TIMING release total ms=21\""
+      },
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819636,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=14518.2 Stop: tracks ended; quiet 1 s\""
+      },
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819636,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=14518.6 GAP begin requestedSeconds=10\""
+      },
+      {
+        "phase": "consoleEarly",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338819636,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=24532.4 GAP end actualMs=10013\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854663,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=26278.1 TIMING controller.initialize ms=695\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854663,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=26327.6 TIMING source.start ms=49\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854663,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=26465.7 TIMING start-to-first-frame ms=1933\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854663,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=26465.8 Start: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854664,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=26466.0 Restart: new frame within 30 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854664,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=26466.9 TIMING source dispose+drain ms=0\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854664,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=26467.5 TIMING controller.dispose ms=0\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854664,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=26467.8 TIMING release total ms=1\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854664,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=27468.9 Stop: tracks ended; quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854664,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=28503.9 Dispose: quiet 1 s\""
+      },
+      {
+        "phase": "console",
+        "level": "INFO",
+        "source": "console-api",
+        "timestamp": 1792338854664,
+        "message": "http://localhost:8092/main.dart.js 90818:32 \"t=28504.2 SCENARIO PASS\""
+      },
+      {
+        "phase": "console",
+        "level": "SEVERE",
+        "source": "javascript",
+        "timestamp": 1792338854664,
+        "message": "http://localhost:8092/ - A VideoFrame was garbage collected without being closed. Applications should call close() on frames when done with them to prevent stalls."
+      }
+    ],
+    "frameCounters": [
+      {
+        "kind": "constructor",
+        "closeCallsPerFrame": 1,
+        "count": 2
+      },
+      {
+        "kind": "ImageDecoder",
+        "closeCallsPerFrame": 0,
+        "count": 1
+      },
+      {
+        "kind": "ImageDecoder",
+        "closeCallsPerFrame": 1,
+        "count": 1
+      },
+      {
+        "kind": "read",
+        "closeCallsPerFrame": 1,
+        "count": 3
+      }
+    ],
+    "frameObservations": [
+      {
+        "id": 1,
+        "kind": "constructor",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      },
+      {
+        "id": 2,
+        "kind": "read",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      },
+      {
+        "id": 3,
+        "kind": "read",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      },
+      {
+        "id": 4,
+        "kind": "ImageDecoder",
+        "closed": 0,
+        "collected": false,
+        "alive": true,
+        "codedWidth": 720
+      },
+      {
+        "id": 5,
+        "kind": "constructor",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      },
+      {
+        "id": 6,
+        "kind": "read",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      },
+      {
+        "id": 7,
+        "kind": "ImageDecoder",
+        "closed": 1,
+        "collected": true,
+        "alive": false,
+        "codedWidth": null
+      }
+    ]
+  }
+]

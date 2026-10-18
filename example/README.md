@@ -85,6 +85,8 @@ archive; see "Platforms and limits" in the package README); there is no hosted C
   check (portrait idle and heavy load, landscape, face portrait and landscape, mirror, capture).
 - The `YuvCameraFrame` iOS 18.7 observation (one iPhone, front camera, portrait and landscape) stays as documented.
 
-A passing target does not prove that a physical camera works. Physical-camera claims are limited to the devices and modes
-named above; other platforms, browsers (including Safari and Firefox), `--wasm` builds, other devices and OS versions are
-not claimed.
+A passing target does not prove that a physical camera works. Additional JavaScript consumer preview/capture and
+stop/dispose scenarios passed on Firefox 143 / Windows (external webcam), Safari 18.6 / macOS 15.6.1 (External fixture),
+Pixel 3 Chrome over HTTPS and iPhone 11 Safari over HTTPS. These bounded observations are not complete browser or
+image-operation parity. Camera `--wasm` and other configurations remain outside the support claims. See the
+[verification bounds and known Chrome warning](../README.md#platforms-and-limits).

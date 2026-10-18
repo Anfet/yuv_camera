@@ -1,0 +1,17 @@
+[
+  {
+    "Algorithm": "SHA256",
+    "Hash": "388D744E28FD9ABCF992B1B618AB26BE6B82143D8C6C0A55DE21585FA922F41C",
+    "Path": "yuv_camera/lib/src/impl/yuv_camera_frame_source_web.dart"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "7A52735C2020870491A37FAD21C2D956A2ED3F7E1F19B6522EA31ACC81BF507B",
+    "Path": "yuv_camera/lib/src/frame_read_loop.dart"
+  },
+  {
+    "Algorithm": "SHA256",
+    "Hash": "CD0853CCD240D46D4C8F44B69EB52500D6B09F4F81FF0C17ECAA74735CCABF47",
+    "Path": "yuv_ffi/lib/src/yuv/shared/yuv_image_decoder.dart"
+  }
+]

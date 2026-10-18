@@ -72,9 +72,15 @@
   results are limited to the devices and modes listed here; a build, a passing emulator or fake-stream target does not
   prove a physical camera works, and other platforms, browsers, `--wasm` builds, other devices and OS versions are not
   claimed.
+* Additional JavaScript preview/capture and stop/dispose consumer scenarios passed on Firefox 143 / Windows with an
+  external webcam, Safari 18.6 / macOS 15.6.1 with the External fixture, Pixel 3 Chrome over HTTPS and iPhone 11 Safari
+  over HTTPS. These results are limited to those scenarios; camera `--wasm` and other configurations are not claimed.
+* Known observation: Chrome 155 / Windows / Flutter 3.44.9 JavaScript/CanvasKit can report a `VideoFrame` collected
+  without explicit close during teardown/reopening. Physical scenarios passed, but cause and ownership remain unknown;
+  no fix or absence of a leak is claimed. See the
+  [preserved investigation](https://github.com/Anfet/yuv_camera/blob/main/doc/evidence/M2/README.md).
 * README with package selection, platform setup (permissions, `camera_desktop` on desktop), a complete Quick start,
-  ownership rules for frames and captures, and the verified-platform limits. `capture()` may return `null`; Safari,
-  Firefox, `--wasm` builds and other devices are not claimed.
+  ownership rules for frames and captures, and the verified-platform limits. `capture()` may return `null`.
 * Step-by-step guides in the [GitHub Wiki](https://github.com/Anfet/yuv_camera/wiki).
 * Migration from the `yuv_ffi` 0.5.1 example: depend on `yuv_camera` instead of copying its camera code, and add
   `camera_desktop` beside `camera` on desktop. Flutter registers the federated plugin when the app is rebuilt.
