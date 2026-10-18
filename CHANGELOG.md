@@ -1,4 +1,4 @@
-## 0.0.1
+## 0.1.0
 
 * The minimum Flutter version is 3.44.0; 3.44.9 is the officially tested and supported version. Other 3.44.x patch
   releases have not been verified.

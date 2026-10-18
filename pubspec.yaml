@@ -1,6 +1,6 @@
 name: yuv_camera
 description: Flutter camera package built on yuv_ffi for capturing and displaying YUV camera frames.
-version: 0.0.1
+version: 0.1.0
 homepage: https://github.com/Anfet/yuv_camera
 repository: https://github.com/Anfet/yuv_camera
 issue_tracker: https://github.com/Anfet/yuv_camera/issues
