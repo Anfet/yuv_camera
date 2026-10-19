@@ -1,101 +1,229 @@
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
 import 'package:integration_test/integration_test.dart';
 import 'package:yuv_camera/yuv_camera.dart';
 import 'package:yuv_ffi/yuv_ffi.dart';
-import 'package:yuv_camera_example/main.dart' as demo;
-import 'package:yuv_camera_example/shape_crop/shape_crop_screen.dart';
 
 /// Where the smoke writes the captured frame as PNG, if set.
 const String _outDir = String.fromEnvironment('SMOKE_OUT');
 
-/// Desktop camera smoke: the demo opens the first step of Shape crop, the
-/// `camera_desktop` stream is shown through the preview for a few seconds, and
-/// "Capture frame" returns a frame of the visible source.
+/// Real desktop capture keeps the same preview drawing, then releases the camera.
 ///
-/// Needs a desktop with a camera; not part of CI. Run from the package root:
-///   pwsh -File tool/ci/drive.ps1 integration_test/desktop_camera_preview_smoke_test.dart windows --dart-define=SMOKE_OUT=`<dir>`
-///   bash tool/ci/drive.sh integration_test/desktop_camera_preview_smoke_test.dart macos --dart-define=SMOKE_OUT=`<dir>`
+/// Needs a desktop with a camera. Run through the drive wrapper; see tool/test/README.md.
 void main() {
-  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  final binding = IntegrationTestWidgetsFlutterBinding.ensureInitialized();
 
-  testWidgets('desktop preview shows the camera stream and captures the drawn frame', (tester) async {
+  testWidgets('desktop capture keeps the preview drawing and releases the camera', (tester) async {
     await YuvFfi.initialize();
-    await tester.pumpWidget(const demo.MainApp());
-    await tester.pumpAndSettle();
-
-    await tester.tap(find.text('Shape crop'));
-    final preview = find.descendant(of: find.byType(ShapeCropScreen), matching: find.byType(YuvFrameView));
-    await _pumpUntil(tester, () => preview.evaluate().isNotEmpty, 'the first camera frame should be drawn');
-
-    final presenter = tester.widget<YuvFrameView>(preview).presenter;
-    var drawn = 0;
-    void onDrawn() => drawn++;
-    presenter.addListener(onDrawn);
-    final watch = Stopwatch()..start();
-    while (watch.elapsed < const Duration(seconds: 6)) {
-      await tester.pump(const Duration(milliseconds: 16));
-    }
-    presenter.removeListener(onDrawn);
-    final cache = PaintingBinding.instance.imageCache;
-    _report(
-      '[view01b_smoke] drawn frames in ${watch.elapsed.inMilliseconds} ms: $drawn; hasShader=${presenter.hasShader}; '
-      'imageCache current=${cache.currentSize} live=${cache.liveImageCount} pending=${cache.pendingImageCount}',
+    final orchestrator = YuvCameraOrchestrator(
+      lensDirection: CameraLensDirection.front,
+      resolution: ResolutionPreset.medium,
+      fps: 30,
+      closeDelay: Duration.zero,
     );
-    expect(drawn, greaterThan(10), reason: 'the preview should keep drawing new camera frames');
-    expect(cache.currentSize + cache.liveImageCount + cache.pendingImageCount, 0, reason: 'preview frames must not pile up in ImageCache');
+    final viewController = YuvCameraViewController();
+    var presented = 0;
+    var baseline = 0;
+    var stage = 'open and first presented frame';
+    Object? scenarioError;
+    StackTrace? scenarioStack;
+    Object? cleanupError;
+    StackTrace? cleanupStack;
 
-    // The shader preview exposes no pixels, so the capture is checked by its
-    // size against the visible part of the source and by having real content.
-    // Byte equality with the drawn frame is proven by camera_capture_native_test
-    // ("capture equals the geometry applied to its drawn frame").
-    final cameraView = find.descendant(of: find.byType(ShapeCropScreen), matching: find.byType(YuvCameraView));
-    final geometry = tester.widget<YuvCameraView>(cameraView).viewController?.geometry.value;
-    if (geometry == null) fail('the camera view should have a geometry before capture');
-    final visible = geometry.visibleSourceRect.size;
-    final expected = geometry.orientation.rotation.swapSize ? visible.flipped : visible;
-    await tester.tap(find.byTooltip('Capture frame'));
-
-    final screen = find.byType(ShapeCropScreen);
-    await _pumpUntil(
-      tester,
-      () => tester.state<ShapeCropScreenState>(screen).captured != null,
-      'the captured frame should be kept for the next step',
-    );
-    final captured = tester.state<ShapeCropScreenState>(screen).captured;
-    if (captured == null) fail('the captured frame should be kept for the next step');
-    final capturedBgra = captured.toBgraBytes();
-    _report('[view01b_smoke] captured: $captured; expected visible ${expected.width.round()}x${expected.height.round()}');
-
-    if (_outDir.isNotEmpty) {
-      _writePng('$_outDir/view01b_captured.png', captured.width, captured.height, _bgraToRgba(capturedBgra));
+    void checkCamera() {
+      if (orchestrator.error case final error?) Error.throwWithStackTrace(error, StackTrace.current);
+      if (orchestrator.controller?.value.errorDescription case final error?) fail('Camera error: $error');
+      if (tester.takeException() case final error?) Error.throwWithStackTrace(error, StackTrace.current);
     }
-    expect((captured.width - expected.width).abs(), lessThanOrEqualTo(2), reason: 'captured width should match the visible source');
-    expect((captured.height - expected.height).abs(), lessThanOrEqualTo(2), reason: 'captured height should match the visible source');
-    expect(_distinctRgb(capturedBgra), greaterThan(1), reason: 'the captured frame should not be a flat or empty buffer');
-    expect(captured.format, YuvPixelFormat.bgra8888);
-    expect(tester.takeException(), isNull);
-  }, timeout: const Timeout(Duration(minutes: 2)));
+
+    try {
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 320,
+                height: 240,
+                child: YuvCameraLeaseBuilder(
+                  orchestrator: orchestrator,
+                  builder: (context, controller) =>
+                      YuvCameraView(cameraController: controller, viewController: viewController, onFramePresented: (_) => presented++),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          checkCamera();
+          return presented > 0 && viewController.geometry.value != null;
+        },
+        const Duration(seconds: 30),
+        stage,
+      );
+      final camera = orchestrator.controller;
+      if (camera == null) fail('The presented frame must belong to an open camera');
+      final previewState = tester.state(find.byType(YuvCameraView));
+
+      stage = 'progress before capture';
+      baseline = presented;
+      await _pumpUntil(
+        tester,
+        () {
+          checkCamera();
+          return presented > baseline;
+        },
+        const Duration(seconds: 30),
+        stage,
+      );
+      expect(orchestrator.state, YuvCameraState.open);
+      expect(identical(orchestrator.controller, camera), isTrue);
+      final cache = PaintingBinding.instance.imageCache;
+      expect(cache.currentSize + cache.liveImageCount + cache.pendingImageCount, 0, reason: 'preview frames must not pile up in ImageCache');
+
+      stage = 'capture with the preview mounted';
+      final geometry = viewController.geometry.value;
+      if (geometry == null) fail('The camera view must have geometry before capture');
+      final visible = geometry.visibleSourceRect.size;
+      final expected = geometry.orientation.rotation.swapSize ? visible.flipped : visible;
+      YuvImage? result;
+      Object? captureError;
+      StackTrace? captureStack;
+      var captureCompleted = false;
+      // Observe errors immediately while pumping the paints needed to complete capture.
+      viewController.capture().then<void>(
+        (image) {
+          result = image;
+          captureCompleted = true;
+        },
+        onError: (Object error, StackTrace stack) {
+          captureError = error;
+          captureStack = stack;
+          captureCompleted = true;
+        },
+      );
+      await _pumpUntil(
+        tester,
+        () {
+          checkCamera();
+          if (captureError case final error?) Error.throwWithStackTrace(error, captureStack ?? StackTrace.current);
+          return captureCompleted;
+        },
+        const Duration(seconds: 30),
+        stage,
+      );
+      final captured = result;
+      if (captured == null) fail('Capture returned no frame');
+      expect(viewController.geometry.value, geometry, reason: 'capture must use unchanged preview geometry');
+      expect(orchestrator.state, YuvCameraState.open);
+      expect(identical(orchestrator.controller, camera), isTrue);
+      expect(previewState.mounted, isTrue);
+      expect(tester.state(find.byType(YuvCameraView)), same(previewState));
+
+      stage = 'progress after capture completed';
+      // A frame that completed capture cannot also satisfy post-capture progress.
+      baseline = presented;
+      await _pumpUntil(
+        tester,
+        () {
+          checkCamera();
+          return presented > baseline;
+        },
+        const Duration(seconds: 30),
+        stage,
+      );
+      expect(orchestrator.state, YuvCameraState.open);
+      expect(identical(orchestrator.controller, camera), isTrue);
+      expect(previewState.mounted, isTrue);
+
+      stage = 'captured content';
+      expect(captured.format, YuvPixelFormat.bgra8888);
+      final capturedBgra = captured.toBgraBytes();
+      expect((captured.width - expected.width).abs(), lessThanOrEqualTo(2), reason: 'captured width should match the visible source');
+      expect((captured.height - expected.height).abs(), lessThanOrEqualTo(2), reason: 'captured height should match the visible source');
+      expect(_distinctRgb(capturedBgra), greaterThan(1), reason: 'the captured frame should not be a flat or empty buffer');
+      expect(cache.currentSize + cache.liveImageCount + cache.pendingImageCount, 0);
+      if (_outDir.isNotEmpty) {
+        _writePng('$_outDir/view01b_captured.png', captured.width, captured.height, _bgraToRgba(capturedBgra));
+      }
+
+      stage = 'natural close after unmount';
+      await tester.pumpWidget(const SizedBox());
+      await _pumpUntil(
+        tester,
+        () {
+          checkCamera();
+          return orchestrator.state == YuvCameraState.closed && orchestrator.controller == null;
+        },
+        const Duration(seconds: 5),
+        stage,
+      );
+    } catch (error, stack) {
+      scenarioError = error;
+      scenarioStack = stack;
+      binding.reportData = {
+        'stage': stage,
+        'state': orchestrator.state.name,
+        'cameraError': '${orchestrator.error}',
+        'baseline': baseline,
+        'presented': presented,
+      };
+      _report('[view01b_smoke] FAIL $stage: $error; state=${orchestrator.state.name}, error=${orchestrator.error}, presented=$baseline->$presented');
+    } finally {
+      try {
+        await tester.pumpWidget(const SizedBox());
+      } catch (error, stack) {
+        cleanupError = error;
+        cleanupStack = stack;
+        _report('[view01b_smoke] cleanup unmount: $error');
+      }
+      try {
+        await orchestrator.dispose().timeout(const Duration(seconds: 10));
+      } catch (error, stack) {
+        cleanupError ??= error;
+        cleanupStack ??= stack;
+        _report('[view01b_smoke] cleanup camera dispose: $error');
+      }
+      try {
+        viewController.dispose();
+      } catch (error, stack) {
+        cleanupError ??= error;
+        cleanupStack ??= stack;
+        _report('[view01b_smoke] cleanup view controller dispose: $error');
+      }
+    }
+    if (scenarioError case final error?) Error.throwWithStackTrace(error, scenarioStack ?? StackTrace.current);
+    if (cleanupError case final error?) Error.throwWithStackTrace(error, cleanupStack ?? StackTrace.current);
+    _report('[view01b_smoke] PASS capture, post-capture progress and camera close');
+  }, timeout: const Timeout(Duration(seconds: 180)));
 }
 
-/// Prints [line] and, when SMOKE_OUT is set, appends it to `view01b_smoke.log` there, because the drive script keeps no console output.
+/// Logs [line] and optionally saves it without hiding a scenario or cleanup error.
 void _report(String line) {
-  debugPrint(line);
+  developer.log(line, name: 'view01b_smoke');
   if (_outDir.isNotEmpty) {
-    File('$_outDir/view01b_smoke.log').writeAsStringSync('$line\n', mode: FileMode.append);
+    try {
+      File('$_outDir/view01b_smoke.log').writeAsStringSync('$line\n', mode: FileMode.append);
+    } catch (error, stack) {
+      developer.log('Could not save smoke log', name: 'view01b_smoke', error: error, stackTrace: stack);
+    }
   }
 }
 
-Future<void> _pumpUntil(WidgetTester tester, bool Function() condition, String reason) async {
-  for (var attempt = 0; attempt < 120; attempt++) {
-    if (condition()) return;
-    await tester.pump(const Duration(milliseconds: 250));
+Future<void> _pumpUntil(WidgetTester tester, bool Function() condition, Duration timeout, String reason) async {
+  final watch = Stopwatch()..start();
+  while (!condition()) {
+    if (watch.elapsed >= timeout) fail('Timed out: $reason');
+    await tester.pump(const Duration(milliseconds: 50));
   }
-  fail('Timed out: $reason');
 }
 
 Uint8List _bgraToRgba(Uint8List bgra) {

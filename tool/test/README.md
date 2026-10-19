@@ -41,8 +41,22 @@ pwsh -File tool/ci/drive.ps1 integration_test/camera_source_web_lifecycle_test.d
 Use the platform scripts for their required preparation, browser flags and devices.
 `orchestrator_cycles_test.dart` checks lifecycle correctness separately from any
 performance workload; its current frame-count oracle is handled by TEST 1.
-It is not an FPS benchmark. `desktop_camera_preview_smoke_test.dart` is an optional
-manual diagnostic with a desktop camera, not an additional mandatory gate.
+It is not an FPS benchmark. `desktop_camera_preview_smoke_test.dart` uses a real
+desktop camera and a test-owned preview. It checks capture without unmounting the
+preview, presented-frame progress before and after capture on the same open
+controller, captured content/geometry and an empty ImageCache. Removing the
+preview must close the camera; cleanup always awaits camera disposal. Optional
+`SMOKE_OUT` writes `view01b_captured.png` and a short result log into an existing
+directory. Run this target when the active task card requires it; it adds no
+general mandatory gate.
+
+In PowerShell, pass the define through the wrapper's explicit array parameter so
+its Windows drive colon is preserved. Create the output directory before running:
+
+```powershell
+& ./tool/ci/drive.ps1 -Target integration_test/desktop_camera_preview_smoke_test.dart -Device windows -FlutterDriveArguments @('--debug', '--dart-define=SMOKE_OUT=Z:/.ai/claude-work/yuv/plat2/smoke')
+```
+
 The iOS targets `ios_yuv420_camera_frame_test.dart` and
 `ios_bgra_camera_frame_test.dart` belong only to final CHECK 22 with its simulator
 and physical-device prerequisites. The shell regression runner belongs to TEST 2
