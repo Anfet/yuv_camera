@@ -66,9 +66,10 @@ against exact commits. So far they have confirmed:
 | The example's tests | VM coverage includes camera lifecycle, device-check, example navigation, ML Kit input conversion, shape crop, orchestrator and face-screen behavior. Exact test totals are recorded with each gate run. |
 | Native capture integration target | Passed with the fake camera platform, no physical camera: on Windows (Release), a physical Pixel 3 (Android 12, `arm64-v8a`, debug and Release builds), Ubuntu 24.04 in a VM, macOS 15.6 (arm64) and the iOS 18.6 simulator. |
 | iOS 18.6 simulator fixture targets | Capture, shape-crop and BGRA targets pass on fixtures; no camera is involved. |
-| Orchestrator-cycles integration target | Passed with a physical camera: Windows 10 built-in webcam (Release); Chrome (JavaScript build) on Windows with a physical webcam and no fake device; physical Pixel 3 (Android 12, `arm64-v8a`, Release build) with `camera` 0.12.1; a webcam passed through to an Ubuntu 24.04 VirtualBox guest (not attached directly to the Linux machine); macOS 15.6 (arm64) built-in camera. |
+| Orchestrator-cycles integration target | Passed with a physical camera: Windows 10 built-in webcam (Debug); Chrome (JavaScript build) on Windows with a physical webcam and no fake device; physical Pixel 3 (Android 12, `arm64-v8a`, Release build) with `camera` 0.12.1; the Integrated Webcam presented as a VirtualBox Webcams virtual device (`/dev/video0`, `uvcvideo`) to an Ubuntu 24.04.5 LTS x86_64 guest in VirtualBox 7.2.20; macOS 15.6 (arm64, Debug) built-in camera. |
 | Shape-crop integration target | Passed on the real YUV backend of the platform, without a camera, on the same platforms, devices and modes as the orchestrator-cycles target. |
 | Minimum Android dependency | `camera` 0.11.0+2 / CameraX 0.6.30 produced inconsistent physical Pixel 3 preview results (three failed runs and one passing run) and is outside the package dependency range, now `>=0.12.1 <0.13.0`. Physical Pixel 3 preview is verified with `camera` 0.12.1. |
+| Desktop real preview/capture smoke | Passed in Debug on Windows 10 and macOS 15.6 (arm64); Windows orchestrator cycles also passed in Debug. |
 | macOS 15.6 preview check | Passed on the built-in camera: two previews, the second continuing after the first is removed, and final close. |
 | Web camera source smoke | Passed in Chrome (JavaScript build) on Windows with a physical webcam. |
 | Web device-choice target | Passed in Chrome (JavaScript build) on a fake media stream with two distinct fake video inputs. This is the only fake-stream result; no physical camera is claimed. |
@@ -77,6 +78,14 @@ against exact commits. So far they have confirmed:
 
 A build, a passing emulator or a fake-stream target does not prove that a physical camera works on that platform.
 Physical-camera claims remain limited to the named devices, modes and scenarios.
+For Linux, the release bundle built in Release; the real-camera cycles and preview/capture targets, plus the fake-camera
+capture target, ran in Profile because Flutter Driver does not support desktop Release integration runs. The Engineer
+visually checked the preview and capture in the VM GUI: colors and orientation were correct, with no bands. The guest
+used Flutter 3.44.9, its GNOME Wayland session and virtual VMSVGA display; an EGL diagnostic reported llvmpipe for that
+diagnostic context and does not establish which renderer Flutter used. This result applies to the named Ubuntu guest,
+VirtualBox Webcams camera path and GUI session. It does not establish bare-metal Linux, other distributions or CPU
+architectures, other camera models or formats, physical-GPU performance or FPS, hotplug/suspend behavior, or
+compatibility with every Wayland or graphics configuration.
 
 Additional physical preview/capture and stop/dispose consumer scenarios passed with Flutter 3.44.9:
 

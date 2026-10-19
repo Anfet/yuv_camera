@@ -1,3 +1,8 @@
+## Unreleased
+
+* Declare Android, iOS, Linux, macOS, Web and Windows support in package metadata. Desktop camera providers remain an
+  application dependency; Linux verification is limited to the Ubuntu VirtualBox configuration documented in README.
+
 ## 0.1.0
 
 * The minimum Flutter version is 3.44.0; 3.44.9 is the officially tested and supported version. Other 3.44.x patch

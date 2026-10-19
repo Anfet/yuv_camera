@@ -269,12 +269,18 @@ against exact commits. From the package root of a Git checkout:
   physical Pixel 3 (Android 12, `arm64-v8a`, debug and Release builds), on Linux (Ubuntu 24.04 in a VirtualBox VM), on
   macOS 15.6 (arm64) and on the iOS 18.6 simulator.
 - The orchestrator-cycles integration target with a physical camera:
-  - the built-in webcam on Windows 10 (Release);
+  - the built-in webcam on Windows 10 (Debug; the real preview/capture smoke also passed in Debug);
   - Chrome (JavaScript build) on Windows with a physical webcam, camera permission auto-approved and no fake device;
   - a physical Pixel 3 (Android 12, `arm64-v8a`, Release build);
-  - a webcam passed through to an Ubuntu 24.04 VirtualBox guest (not a camera attached directly to the Linux machine);
-  - the built-in camera on macOS 15.6 (arm64), where the orchestrator cycles also confirmed two previews, the second
-    continuing after the first is removed, and the final close.
+  - the Integrated Webcam presented as a VirtualBox Webcams virtual device (`/dev/video0`, `uvcvideo`) to an Ubuntu
+    24.04.5 LTS x86_64 guest in VirtualBox 7.2.20, not attached directly to a Linux computer;
+  - the built-in camera on macOS 15.6 (arm64, Debug), where the real preview/capture smoke and orchestrator cycles
+    passed, including two previews, the second continuing after the first is removed, and the final close.
+- Linux's release bundle was built in Release; the real-camera cycles and preview/capture targets, plus the fake-camera
+  capture target, ran in Profile because Flutter Driver does not support desktop Release integration runs. The Engineer
+  visually checked the preview and capture in the VM GUI: colors and orientation were correct, with no bands. This run
+  used Flutter 3.44.9, the guest's GNOME Wayland session and virtual VMSVGA display; an EGL diagnostic reported
+  llvmpipe, which identifies that diagnostic context and does not establish which renderer Flutter used.
 - The shape-crop integration target, which needs no camera and runs on the real YUV backend of the platform, on the same
   platforms, devices and modes as the orchestrator-cycles target above.
 - The Web camera source smoke target in Chrome (JavaScript build) with a physical webcam on Windows.
@@ -289,6 +295,10 @@ against exact commits. From the package root of a Git checkout:
 
 A build or a passing emulator or fake-stream target does not prove that a
 physical camera works on that platform. Physical-camera claims remain limited to the named devices, modes and scenarios.
+The Linux result above applies to that Ubuntu guest, VirtualBox Webcams camera path, test modes and GUI session. It does
+not establish bare-metal Linux, other distributions or CPU architectures, other camera models or formats, performance
+or FPS on a physical GPU, or hotplug and suspend behavior. A single Wayland VM session does not establish compatibility
+with every Wayland or graphics configuration.
 
 Additional physical preview/capture and stop/dispose consumer scenarios passed with Flutter 3.44.9:
 
