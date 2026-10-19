@@ -1,4 +1,4 @@
-## Unreleased
+## 0.1.1
 
 * Declare Android, iOS, Linux, macOS, Web and Windows support in package metadata. Desktop camera providers remain an
   application dependency; Linux verification is limited to the Ubuntu VirtualBox configuration documented in README.

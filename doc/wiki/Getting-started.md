@@ -11,7 +11,7 @@ complete app with a capture button.
 
 ```yaml
 dependencies:
-  yuv_camera: ^0.1.0
+  yuv_camera: ^0.1.1
   yuv_ffi: ^0.5.2
   camera: ^0.12.1
   # Windows, macOS, and Linux only:

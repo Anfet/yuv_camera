@@ -22,7 +22,7 @@ with it; `yuv_ffi` never depends on `yuv_camera`.
 
 ```yaml
 dependencies:
-  yuv_camera: ^0.1.0
+  yuv_camera: ^0.1.1
   yuv_ffi: ^0.5.2
   camera: ^0.12.1
   # Windows, macOS, and Linux only:

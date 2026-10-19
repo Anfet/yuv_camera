@@ -1,4 +1,6 @@
 # yuv_camera — принятые задачи
+- **PACK 9** — ACCEPTED without independent review (Review: none, 19.10.2026). Package version, CHANGELOG 0.1.1 section, README and wiki install snippets/Home aligned on 0.1.1 over source `288717703a9ccbfc34d63c83a92dd5234b7b8e89`; no lib, example, lock, bounds or platform setup changed (diff against PLAT 3 source empty). Runtime evidence of PLAT 3 (Linux VM Release/Profile, Windows/macOS Debug; camera 0.12.1, camera_desktop 2.0.0, interface 2.15.0, hosted yuv_ffi 0.5.2) CARRIED unchanged. Frozen camera-only candidate prepared with the group helper (hosted yuv_ffi 0.5.2, SDK Flutter 3.44.9 / Dart 3.12.2); hosted camera receipt/consumer, publication, push, wiki upload, tag and Release are PENDING for REL 3 and need separate Engineer authorization. Freeze and handoff: group `tasks/platform-one/cards/evidence/PACK-9/r1/`.
+
 - **PLAT 4** — ACCEPTED without independent review (Review: none, 19.10.2026). The pubspec declares Android, iOS,
   Linux, macOS, Web and Windows; `camera_desktop` remains an application-selected provider and package version stays
   0.1.0. README and Platforms-and-troubleshooting document the bounded Ubuntu 24.04.5 x86_64 / VirtualBox 7.2.20
